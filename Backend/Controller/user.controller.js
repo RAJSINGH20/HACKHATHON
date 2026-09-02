@@ -331,6 +331,15 @@ export const govtLogin = async (req, res) => {
 
     const govt = await Govt.findOne({ email });
 
+    const isPasswordValid = await bcrypt.compare(password, govt.password);
+
+    if(!isPasswordValid) {
+        return res.status(401).json({
+            success: false,
+            message: "Invalid password",
+        });
+    }
+
     if(!govt) {
         return res.status(404).json({
             success: false,
