@@ -1,0 +1,179 @@
+@import "tailwindcss";
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f5f7f9;
+  color: #263238;
+}
+
+button,
+a {
+  transition: all 0.2s ease;
+}
+
+/* ================================
+   ANIMATIONS
+================================ */
+
+@keyframes fadeDown {
+  from {
+    opacity: 0;
+    transform: translateY(-15px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(25px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseSoft {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+@keyframes floatRice {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.header-animation {
+  animation: fadeDown 0.7s ease;
+}
+
+.fade-up {
+  animation: fadeUp 0.8s ease both;
+}
+
+.fade-up-delay-1 {
+  animation: fadeUp 0.8s ease 0.15s both;
+}
+
+.fade-up-delay-2 {
+  animation: fadeUp 0.8s ease 0.3s both;
+}
+
+.fade-up-delay-3 {
+  animation: fadeUp 0.8s ease 0.45s both;
+}
+
+.rice-float {
+  animation: floatRice 4s ease-in-out infinite;
+}
+
+/* ================================
+   SCROLLBAR
+================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #e8ecef;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #0072bc;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #005c99;
+}
+
+/* ================================
+   MENU
+================================ */
+
+.menu-item {
+  position: relative;
+}
+
+.menu-item::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -5px;
+  width: 0;
+  height: 2px;
+  background: white;
+  transition: width 0.25s ease;
+}
+
+.menu-item:hover::after {
+  width: 100%;
+}
+
+/* ================================
+   SERVICE CARD
+================================ */
+
+.service-card {
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.service-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+/* ================================
+   STAT CARD
+================================ */
+
+.stat-card {
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* ================================
+   MOBILE
+================================ */
+
+@media (max-width: 768px) {
+  .desktop-menu {
+    display: none;
+  }
+}
