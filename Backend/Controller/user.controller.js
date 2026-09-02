@@ -320,7 +320,7 @@ export const govtRegistration = async (req, res) => {
 export const govtLogin = async (req, res) => {
 
     const { email, password } = req.body;
-    console.log(email,password)
+    console.log(email,",",password)
 
     if (!email || !password) {
         return res.status(400).json({
