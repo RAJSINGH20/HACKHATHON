@@ -7,6 +7,7 @@ import cors from "cors";
 
 import connectDB from "./Database/db.js";
 import authRoutes from "./Routes/user.routes.js";
+import bookingRoutes from "./Routes/booking.routes.js";
 
 const app = express();
 
@@ -29,7 +30,10 @@ connectDB();
 // MIDDLEWARE
 // ==============================
 
-app.use(cors());
+app.use(cors({
+  origin: "http://localhost:5173", // or whatever your frontend's actual origin/port is
+  credentials: true,
+}));
 app.use(express.json());
 
 // ==============================
@@ -37,6 +41,7 @@ app.use(express.json());
 // ==============================
 
 app.use("/api/auth", authRoutes);
+app.use("/api/bookings", bookingRoutes);
 
 // ==============================
 // TEST ROUTE

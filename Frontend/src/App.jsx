@@ -14,6 +14,7 @@ import Register_Govt from "./Components/Registration/GovtRegistration.jsx";
 import Admin_Dashboard from "./Components/Dashboard/Admin_Dashboard.jsx";
 import Farmer_Dashboard from "./Components/Dashboard/Farmer_Dashboard.jsx";
 import Govt_Dashboard from "./Components/Dashboard/Govt_Dashboard.jsx";
+import Booking from "./Components/Booking/Booking.jsx";
 
 function App() {
   return (
@@ -80,6 +81,11 @@ function App() {
       <Route
         path="/government-dashboard"
         element={<Govt_Dashboard />}
+      />
+      {/* ================= BOOKING ================= */}
+      <Route
+        path="/booking"
+        element={<Booking />}
       />
     </Routes>
   );
