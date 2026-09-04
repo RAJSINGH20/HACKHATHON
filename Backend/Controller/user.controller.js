@@ -80,43 +80,51 @@ export const farmerRegistration = async (req, res) => {
 };
 
 export const farmerLogin = async (req, res) => {
-    const { mobile, password } = req.body;
+    try {
+        const { mobile, password } = req.body;
 
-    if (!mobile || !password) {
-        return res.status(400).json({
+        if (!mobile || !password) {
+            return res.status(400).json({
+                success: false,
+                message: "Mobile number and password are required",
+            });
+        }
+
+        const farmer = await Farmer.findOne({ mobile });
+
+        if (!farmer) {
+            return res.status(404).json({
+                success: false,
+                message: "Farmer not found",
+            });
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, farmer.password);
+
+        if (!isPasswordValid) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid password",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Farmer logged in successfully",
+            user: {
+                id: farmer._id,
+                name: farmer.name,
+                mobile: farmer.mobile,
+                role: farmer.role,
+            },
+        });
+    } catch (error) {
+        console.error("FARMER LOGIN ERROR:", error);
+        return res.status(500).json({
             success: false,
-            message: "Mobile number and password are required",
+            message: "Something went wrong, please try again later",
         });
     }
-
-    const farmer = await Farmer.findOne({ mobile });
-
-    if (!farmer) {
-        return res.status(404).json({
-            success: false,
-            message: "Farmer not found",
-        });
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, farmer.password);
-
-    if (!isPasswordValid) {
-        return res.status(401).json({
-            success: false,
-            message: "Invalid password",
-        });
-    }
-
-    return res.status(200).json({
-        success: true,
-        message: "Farmer logged in successfully",
-        user: {
-            id: farmer._id,
-            name: farmer.name,
-            mobile: farmer.mobile,
-            role: farmer.role,
-        },
-    });
 }
 
 
@@ -198,7 +206,7 @@ export const adminRegistration = async (req, res) => {
 };
 
 export const adminLogin = async (req, res) => {
-    
+
     const { email, password } = req.body;
     console.log(email, password);
 
@@ -211,7 +219,7 @@ export const adminLogin = async (req, res) => {
 
     const admin = await Admin.findOne({ email });
 
-    if(!admin) {
+    if (!admin) {
         return res.status(404).json({
             success: false,
             message: "Admin not found",
@@ -220,7 +228,7 @@ export const adminLogin = async (req, res) => {
 
     const isPasswordValid = await bcrypt.compare(password, admin.password);
 
-    if(!isPasswordValid) {
+    if (!isPasswordValid) {
         return res.status(401).json({
             success: false,
             message: "Invalid password",
@@ -320,7 +328,7 @@ export const govtRegistration = async (req, res) => {
 export const govtLogin = async (req, res) => {
 
     const { email, password } = req.body;
-    console.log(email,",",password)
+    console.log(email, ",", password)
 
     if (!email || !password) {
         return res.status(400).json({
@@ -333,14 +341,14 @@ export const govtLogin = async (req, res) => {
 
     const isPasswordValid = await bcrypt.compare(password, govt.password);
 
-    if(!isPasswordValid) {
+    if (!isPasswordValid) {
         return res.status(401).json({
             success: false,
             message: "Invalid password",
         });
     }
 
-    if(!govt) {
+    if (!govt) {
         return res.status(404).json({
             success: false,
             message: "Government account not found",
