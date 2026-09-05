@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const API_URL = import.meta.env.CLIENT_URL;
+const API_URL = import.meta.env.VITE_API_URL;
 
 const FarmerLogin = () => {
   const [loading, setLoading] = useState(false);
@@ -13,13 +13,13 @@ const FarmerLogin = () => {
     e.preventDefault();
     setError("");
     setLoading(true);
+
     try {
       const res = await axios.post(`${API_URL}/api/auth/farmer_login`, {
         mobile: e.target.mobile.value,
         password: e.target.password.value,
       });
 
-      // adjust based on your API's actual response shape
       if (res.data?.token) {
         localStorage.setItem("farmerToken", res.data.token);
       }
@@ -27,8 +27,10 @@ const FarmerLogin = () => {
       navigate("/farmer-dashboard");
     } catch (err) {
       console.error("Error occurred while logging in farmer:", err);
+
       setError(
-        err.response?.data?.message || "Login failed. Please check your credentials."
+        err.response?.data?.message ||
+          "Login failed. Please check your credentials."
       );
     } finally {
       setLoading(false);
@@ -37,7 +39,6 @@ const FarmerLogin = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-cyan-50 px-4">
-
       <div className="w-full max-w-md bg-white/90 backdrop-blur-md p-8 rounded-3xl shadow-xl border border-green-100">
 
         {/* Farmer Icon */}
@@ -59,6 +60,7 @@ const FarmerLogin = () => {
         {/* Login Form */}
         <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
 
+          {/* Error */}
           {error && (
             <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               {error}
@@ -135,7 +137,10 @@ const FarmerLogin = () => {
 
           {/* Register */}
           <div className="text-center pt-1">
-            <span className="text-sm text-gray-500">Don't have an account? </span>
+            <span className="text-sm text-gray-500">
+              Don't have an account?{" "}
+            </span>
+
             <Link
               to="/farmer-register"
               className="text-sm font-semibold text-green-700 hover:text-green-800 transition"
@@ -143,7 +148,6 @@ const FarmerLogin = () => {
               Register
             </Link>
           </div>
-
         </form>
 
         {/* Toll Free Option */}
@@ -164,7 +168,6 @@ const FarmerLogin = () => {
         <p className="text-center text-sm text-gray-400 mt-6">
           🌱 Farmer AI • Empowering Farmers
         </p>
-
       </div>
     </div>
   );
