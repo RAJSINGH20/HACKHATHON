@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const API_URL = import.meta.env.CLIENT_URL || "http://localhost:3000";
+const API_URL = "https://hackhathon-zo37-git-main-raj-singhs-projects-fd8d0c78.vercel.app/" || "http://localhost:3000";
 
 const FarmerLogin = () => {
   const [loading, setLoading] = useState(false);
