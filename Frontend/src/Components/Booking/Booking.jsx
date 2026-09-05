@@ -10,6 +10,8 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
+const API_URL = import.meta.env.CLIENT_URL || "http://localhost:3000";
+
 const PRODUCTS = [
   "Wheat",
   "Paddy",
@@ -86,7 +88,7 @@ const BookingPage = () => {
 
     try {
       const { data } = await axios.post(
-        "http://localhost:3000/api/bookings/createBooking",
+        `${API_URL}/api/bookings/createBooking`,
         form,
         {
           withCredentials: true
