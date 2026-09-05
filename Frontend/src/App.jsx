@@ -32,20 +32,16 @@ function App() {
       />
 
       {/* ================= LOGIN ================= */}
-
-      {/* Farmer Login */}
       <Route
         path="/farmer-login"
         element={<Login_Farmer />}
       />
 
-      {/* Admin Login */}
       <Route
         path="/admin-login"
         element={<Login_Admin />}
       />
 
-      {/* Government Login */}
       <Route
         path="/government-login"
         element={<Login_Govt />}
