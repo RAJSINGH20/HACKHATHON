@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import axios from "axios";
 
-const API_URL = import.meta.env.CLIENT_URL || "http://localhost:3000";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 const cardVariants = {
   hidden: { opacity: 0, y: 30, scale: 0.96 },
