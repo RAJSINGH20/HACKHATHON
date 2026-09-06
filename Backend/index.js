@@ -8,7 +8,6 @@ import cors from "cors";
 import connectDB from "./Database/db.js";
 import authRoutes from "./Routes/user.routes.js";
 import bookingRoutes from "./Routes/booking.routes.js";
-import mongoose from "mongoose";
 import {connectRabbitMQ} from "./Database/rabbit.js";
 
 const app = express();
@@ -27,9 +26,9 @@ console.log("DNS servers set to:", dns.getServers());
 // ==============================
 
 connectDB();
-// connectRabbitMQ().then(() => {
-//   console.log("RabbitMQ connection established successfully.");
-// });
+connectRabbitMQ().then(() => {
+  console.log("RabbitMQ connection established successfully.");
+});
 
 // ==============================
 // MIDDLEWARE
