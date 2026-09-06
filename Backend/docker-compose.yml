@@ -1,0 +1,32 @@
+services:
+  backend:
+    build: .
+    container_name: farmer-backend
+    ports:
+      - "3000:3000"
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017/farmer_ai
+    depends_on:
+      - mongodb
+
+  frontend:
+    build: ../Frontend
+    container_name: farmer-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:3000
+    depends_on:
+      - backend
+
+  mongodb:
+    image: mongo:latest
+    container_name: farmer-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
