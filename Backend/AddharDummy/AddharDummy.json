@@ -1,0 +1,110 @@
+[
+  {
+    "aadhaar_number": "234567890123",
+    "name": "Rahul Sharma",
+    "date_of_birth": "1990-05-15",
+    "gender": "Male",
+    "address": {"house_no": "12A", "street": "MG Road", "city": "Durgapur", "district": "Paschim Bardhaman", "state": "West Bengal", "pincode": "713201"},
+    "mobile_number": "9876543210",
+    "email": "rahul.sharma@example.com"
+  },
+  {
+    "aadhaar_number": "345678901234",
+    "name": "Priya Patel",
+    "date_of_birth": "1988-11-22",
+    "gender": "Female",
+    "address": {"house_no": "45B", "street": "Ring Road", "city": "Ahmedabad", "district": "Ahmedabad", "state": "Gujarat", "pincode": "380001"},
+    "mobile_number": "9823456781",
+    "email": "priya.patel@example.com"
+  },
+  {
+    "aadhaar_number": "456789012345",
+    "name": "Amit Kumar",
+    "date_of_birth": "1995-02-10",
+    "gender": "Male",
+    "address": {"house_no": "78", "street": "Park Street", "city": "Kolkata", "district": "Kolkata", "state": "West Bengal", "pincode": "700016"},
+    "mobile_number": "9812345678",
+    "email": "amit.kumar@example.com"
+  },
+  {
+    "aadhaar_number": "567890123456",
+    "name": "Sneha Reddy",
+    "date_of_birth": "1992-07-30",
+    "gender": "Female",
+    "address": {"house_no": "9", "street": "Banjara Hills", "city": "Hyderabad", "district": "Hyderabad", "state": "Telangana", "pincode": "500034"},
+    "mobile_number": "9845123467",
+    "email": "sneha.reddy@example.com"
+  },
+  {
+    "aadhaar_number": "678901234567",
+    "name": "Vikram Singh",
+    "date_of_birth": "1985-09-05",
+    "gender": "Male",
+    "address": {"house_no": "23", "street": "Civil Lines", "city": "Jaipur", "district": "Jaipur", "state": "Rajasthan", "pincode": "302006"},
+    "mobile_number": "9856234178",
+    "email": "vikram.singh@example.com"
+  },
+  {
+    "aadhaar_number": "789012345678",
+    "name": "Anjali Gupta",
+    "date_of_birth": "1998-04-18",
+    "gender": "Female",
+    "address": {"house_no": "56C", "street": "Sector 15", "city": "Noida", "district": "Gautam Buddh Nagar", "state": "Uttar Pradesh", "pincode": "201301"},
+    "mobile_number": "9867345289",
+    "email": "anjali.gupta@example.com"
+  },
+  {
+    "aadhaar_number": "890123456789",
+    "name": "Rohan Mehta",
+    "date_of_birth": "1991-12-25",
+    "gender": "Male",
+    "address": {"house_no": "34", "street": "Linking Road", "city": "Mumbai", "district": "Mumbai Suburban", "state": "Maharashtra", "pincode": "400050"},
+    "mobile_number": "9878456390",
+    "email": "rohan.mehta@example.com"
+  },
+  {
+    "aadhaar_number": "901234567890",
+    "name": "Kavita Nair",
+    "date_of_birth": "1987-03-14",
+    "gender": "Female",
+    "address": {"house_no": "17", "street": "MG Road", "city": "Kochi", "district": "Ernakulam", "state": "Kerala", "pincode": "682016"},
+    "mobile_number": "9889567401",
+    "email": "kavita.nair@example.com"
+  },
+  {
+    "aadhaar_number": "112233445566",
+    "name": "Suresh Iyer",
+    "date_of_birth": "1980-06-08",
+    "gender": "Male",
+    "address": {"house_no": "8A", "street": "Anna Salai", "city": "Chennai", "district": "Chennai", "state": "Tamil Nadu", "pincode": "600002"},
+    "mobile_number": "9890678512",
+    "email": "suresh.iyer@example.com"
+  },
+  {
+    "aadhaar_number": "223344556677",
+    "name": "Meera Joshi",
+    "date_of_birth": "1993-10-02",
+    "gender": "Female",
+    "address": {"house_no": "62", "street": "FC Road", "city": "Pune", "district": "Pune", "state": "Maharashtra", "pincode": "411005"},
+    "mobile_number": "9801789623",
+    "email": "meera.joshi@example.com"
+  },
+  {
+    "aadhaar_number": "334455667788",
+    "name": "Arjun Rao",
+    "date_of_birth": "1996-08-19",
+    "gender": "Male",
+    "address": {"house_no": "5", "street": "Brigade Road", "city": "Bengaluru", "district": "Bengaluru Urban", "state": "Karnataka", "pincode": "560025"},
+    "mobile_number": "9812890734",
+    "email": "arjun.rao@example.com"
+  },
+  {
+    "aadhaar_number": "445566778899",
+    "name": "Deepa Chatterjee",
+    "date_of_birth": "1989-01-27",
+    "gender": "Female",
+    "address": {"house_no": "31B", "street": "Salt Lake", "city": "Kolkata", "district": "North 24 Parganas", "state": "West Bengal", "pincode": "700091"},
+    "mobile_number": "9823901845",
+    "email": "deepa.chatterjee@example.com"
+  }
+]

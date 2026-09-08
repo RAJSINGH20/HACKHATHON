@@ -1,31 +1,32 @@
 import amqp from "amqplib";
 
-let connection;
-let channel;
+const queue = "tasks";
 
-const connectRabbitMQ = async () => {
-    try {
-        connection = await amqp.connect(
-            process.env.RABBITMQ_URL || "amqp://localhost:5672"
-        );
+export async function connectRabbitMQ() {
+  const url =
+    process.env.RABBITMQ_URL ||
+    "amqp://guest:guest@127.0.0.1:5672";
 
-        channel = await connection.createChannel();
+  const connection = await amqp.connect(url);
+  const publisherChannel = await connection.createChannel();
+  const consumerChannel = await connection.createChannel();
 
-        console.log("RabbitMQ Connected");
+  await publisherChannel.assertQueue(queue, { durable: false });
 
-        return channel;
-    } catch (error) {
-        console.error("RabbitMQ Connection Error:", error.message);
-        throw error;
+  await consumerChannel.assertQueue(queue, { durable: false });
+  await consumerChannel.consume(queue, (message) => {
+    if (message) {
+      console.log(message.content.toString());
+      consumerChannel.ack(message);
     }
-};
+  });
 
-const getChannel = () => {
-    if (!channel) {
-        throw new Error("RabbitMQ channel is not initialized");
-    }
+  await publisherChannel.sendToQueue(
+    queue,
+    Buffer.from("something to do")
+  );
 
-    return channel;
-};
+  console.log("✅ RabbitMQ connected on port 25672");
 
-export { connectRabbitMQ, getChannel };
+  return connection;
+}

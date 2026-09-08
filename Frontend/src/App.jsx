@@ -20,6 +20,9 @@ import Govt_Dashboard from "./Components/Dashboard/Govt_Dashboard.jsx";
 
 // Booking
 import Booking from "./Components/Booking/Booking.jsx";
+import AdminAadhaarCheck from "./Components/Addhar/AdminAddhar.jsx";
+import FarmerAadhaarCheck from "./Components/Addhar/FarmerAddhar.jsx";
+import GovtAadhaarCheck from "./Components/Addhar/GovtAddhar.jsx";
 
 function App() {
   return (
@@ -93,6 +96,24 @@ function App() {
         path="/booking"
         element={<Booking />}
       />
+
+
+      {/* ================= ADDHAR ================= */}
+
+    <Route
+      path="/admin-aadhar"
+      element={<AdminAadhaarCheck />} 
+    />
+
+    <Route
+      path="/farmer-aadhar"
+      element={<FarmerAadhaarCheck />} 
+    />
+
+    <Route
+      path="/government-aadhar"
+      element={<GovtAadhaarCheck />} 
+    />
 
     </Routes>
   );

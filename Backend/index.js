@@ -9,7 +9,7 @@ import connectDB from "./Database/db.js";
 import authRoutes from "./Routes/user.routes.js";
 import bookingRoutes from "./Routes/booking.routes.js";
 import {connectRabbitMQ} from "./Database/rabbit.js";
-
+import aadhaarRoutes from './Routes/Addhar.routes.js';
 const app = express();
 
 // ==============================
@@ -25,10 +25,20 @@ console.log("DNS servers set to:", dns.getServers());
 // DATABASE
 // ==============================
 
+// ...existing code...
+
 connectDB();
-connectRabbitMQ().then(() => {
-  console.log("RabbitMQ connection established successfully.");
-});
+
+connectRabbitMQ()
+  .then(() => {
+    console.log("RabbitMQ connection established successfully.");
+  })
+  .catch((error) => {
+    console.error("RabbitMQ connection failed:", error.message);
+    console.log("The server will continue without RabbitMQ.");
+  });
+
+// ...existing code...
 
 // ==============================
 // MIDDLEWARE
@@ -46,6 +56,7 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/bookings", bookingRoutes);
+app.use('/api/aadhaar', aadhaarRoutes);
 
 // ==============================
 // TEST ROUTE
