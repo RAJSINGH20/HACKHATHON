@@ -34,7 +34,7 @@ export default function FarmerAadhaarCheck() {
             }
 
             if (data.registered) {
-                navigate("/admin-login");
+                navigate("/farmer-login");
             } else {
                 setNotRegistered(true);
             }
