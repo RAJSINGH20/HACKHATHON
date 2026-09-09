@@ -36,9 +36,8 @@ const AdminLogin = () => {
         password: e.target.password.value,
       });
 
-      // adjust based on your API's actual response shape
-      if (res.data?.token) {
-        localStorage.setItem("adminToken", res.data.token);
+      if (res.data?.user) {
+        localStorage.setItem("adminUser", JSON.stringify(res.data.user));
       }
 
       navigate("/admin-dashboard");

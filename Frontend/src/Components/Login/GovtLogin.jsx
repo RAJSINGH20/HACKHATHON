@@ -36,9 +36,8 @@ const GovtLogin = () => {
         password: e.target.password.value,
       });
 
-      // adjust based on your API's actual response shape
-      if (res.data?.token) {
-        localStorage.setItem("govtToken", res.data.token);
+      if (res.data?.user) {
+        localStorage.setItem("govtUser", JSON.stringify(res.data.user));
       }
 
       navigate("/government-dashboard");

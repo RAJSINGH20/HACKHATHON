@@ -32,8 +32,8 @@ const FarmerLogin = () => {
         }
       );
 
-      if (res.data?.token) {
-        localStorage.setItem("farmerToken", res.data.token);
+      if (res.data?.user) {
+        localStorage.setItem("farmerUser", JSON.stringify(res.data.user));
       }
 
       navigate("/farmer-dashboard");

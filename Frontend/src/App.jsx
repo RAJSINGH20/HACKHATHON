@@ -23,6 +23,7 @@ import Booking from "./Components/Booking/Booking.jsx";
 import AdminAadhaarCheck from "./Components/Addhar/AdminAddhar.jsx";
 import FarmerAadhaarCheck from "./Components/Addhar/FarmerAddhar.jsx";
 import GovtAadhaarCheck from "./Components/Addhar/GovtAddhar.jsx";
+import ProtectedRoute from "./Components/ProtectedRoute.jsx";
 
 function App() {
   return (
@@ -75,19 +76,31 @@ function App() {
       {/* Admin Dashboard */}
       <Route
         path="/admin-dashboard"
-        element={<Admin_Dashboard />}
+        element={
+          <ProtectedRoute role="admin">
+            <Admin_Dashboard />
+          </ProtectedRoute>
+        }
       />
 
       {/* Farmer Dashboard */}
       <Route
         path="/farmer-dashboard"
-        element={<Farmer_Dashboard />}
+        element={
+          <ProtectedRoute role="farmer">
+            <Farmer_Dashboard />
+          </ProtectedRoute>
+        }
       />
 
       {/* Government Dashboard */}
       <Route
         path="/government-dashboard"
-        element={<Govt_Dashboard />}
+        element={
+          <ProtectedRoute role="govt">
+            <Govt_Dashboard />
+          </ProtectedRoute>
+        }
       />
 
       {/* ================= BOOKING ================= */}
