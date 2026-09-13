@@ -2,6 +2,10 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
+const CLIENT_URL = import.meta.env.VITE_API_URL;
+
+
+
 const cardVariants = {
   hidden: { opacity: 0, y: 30, scale: 0.97 },
   visible: {
@@ -34,6 +38,7 @@ const AdminRegister = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -70,16 +75,35 @@ const AdminRegister = () => {
     return Object.keys(next).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validate()) {
-      // Hook up to your registration API here
-      console.log("Registering admin:", {
-        username: form.username,
-        email: form.email,
-        password: form.password,
-      });
+    if (!validate() || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(
+        `${CLIENT_URL || ""}/api/auth/admin_register`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: form.username.trim(),
+            email: form.email.trim(),
+            password: form.password,
+          }),
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.message || data.error || "Registration failed");
+      }
+
       setSubmitted(true);
+    } catch (error) {
+      setErrors({ form: error.message || "Unable to register. Please try again." });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -185,6 +209,17 @@ const AdminRegister = () => {
                 <motion.p variants={itemVariants} className="text-gray-500 mt-2">
                   Enter your username, email and a password
                 </motion.p>
+
+                {errors.form && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-red-500 text-sm mt-3"
+                    role="alert"
+                  >
+                    {errors.form}
+                  </motion.p>
+                )}
 
                 <form className="mt-8 space-y-5" onSubmit={handleSubmit} noValidate>
                   {/* Username */}
@@ -334,9 +369,10 @@ const AdminRegister = () => {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.97 }}
                     type="submit"
+                    disabled={isSubmitting}
                     className="w-full mt-2 bg-green-700 hover:bg-green-800 text-white py-4 rounded-xl font-semibold transition"
                   >
-                    Register Admin
+                    {isSubmitting ? "Registering..." : "Register Admin"}
                   </motion.button>
                 </form>
               </motion.div>
