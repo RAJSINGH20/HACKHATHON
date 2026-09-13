@@ -27,16 +27,16 @@ connectDB();
 
 
 
-app.use(
-  cors({
-    origin: [
-      "http://localhost:5173",
-      "https://hackhathon-omega.vercel.app"
-    ],
-    credentials: true
-  })
-);
-``
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://hackhathon-omega.vercel.app",
+  "https://hackhathon-git-main-raj-singhs-projects-fd8d0c7.vercel.app"
+];
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
 
 app.use(express.json());
 
