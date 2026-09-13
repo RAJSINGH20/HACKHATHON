@@ -27,16 +27,24 @@ connectDB();
 
 
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://hackhathon-omega.vercel.app",
+  "https://hackhathon-git-main-raj-singhs-projects-fd8d0c7.vercel.app"
+];
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://hackhathon-omega.vercel.app"
-    ],
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true
   })
 );
-``
 
 app.use(express.json());
 
