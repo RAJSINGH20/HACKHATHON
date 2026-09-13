@@ -13,8 +13,13 @@ import {
   AlertCircle,
   CheckCircle2,
 } from "lucide-react";
+import dotenv from "dotenv";
 
-const API_URL = "http://localhost:3000/api/aadhaar/check";
+dotenv.config();
+
+const CLIENT_URL = process.env.REACT_APP_CLIENT_URL;
+
+const API_URL = `${CLIENT_URL}/api/aadhaar/check`;
 const UIDAI_URL = "https://uidai.gov.in/";
 
 export default function AdminAadhaarCheck() {

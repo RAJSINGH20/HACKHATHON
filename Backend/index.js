@@ -29,7 +29,7 @@ connectDB();
 
 app.use(
   cors({
-    origin: "http://localhost:5173" || "https://hackhathon-omega.vercel.app/",
+    origin: process.env.CLIENT_URL,
     credentials: true,
   })
 );
