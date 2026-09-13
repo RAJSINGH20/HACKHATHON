@@ -33,6 +33,7 @@ const allowedOrigins = [
   "https://hackhathon-git-main-raj-singhs-projects-fd8d0c7.vercel.app"
 ];
 
+<<<<<<< HEAD
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -45,6 +46,12 @@ app.use(
     credentials: true
   })
 );
+=======
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
+>>>>>>> d6cb9f279cbb5c1a3002833b8d3512ea6926aa23
 
 app.use(express.json());
 
