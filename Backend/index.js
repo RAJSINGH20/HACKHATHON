@@ -29,7 +29,7 @@ connectDB();
 
 app.use(
   cors({
-    origin: "http://localhost:5173" || "https://hackhathon-git-main-raj-singhs-projects-fd8d0c78.vercel.app/",
+    origin: "http://localhost:5173" || "https://hackhathon-omega.vercel.app",
     credentials: true,
   })
 );
