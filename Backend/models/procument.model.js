@@ -172,6 +172,18 @@ const procurementSchema = new mongoose.Schema(
             default: 5,
         },
 
+        centreType: {
+            type: String,
+            enum: [
+                "Centralized",
+                "Mobile",
+                "FPO/FPC",
+                "SHG",
+                "Society",
+            ],
+            default: "Centralized",
+        },
+
         isActive: {
             type: Boolean,
             default: true,

@@ -206,6 +206,7 @@ const DetailRow = ({ label, value }) => (
 const ControllerPage = ({ onBack }) => {
   const [bookings, setBookings] = useState([]);
   const [dashboard, setDashboard] = useState(null);
+  const [stats, setStats] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -236,13 +237,16 @@ const ControllerPage = ({ onBack }) => {
 
       setError("");
 
-      const [bookingResponse, dashboardResponse] =
+      const [bookingResponse, dashboardResponse, statsResponse] =
         await Promise.all([
           axios.get(
             `${API_URL}/api/procurement/bookings`
           ),
           axios.get(
             `${API_URL}/api/procurement/dashboard`
+          ),
+          axios.get(
+            `${API_URL}/api/procurement/stats`
           ),
         ]);
 
@@ -253,6 +257,8 @@ const ControllerPage = ({ onBack }) => {
       setDashboard(
         dashboardResponse.data?.dashboard || null
       );
+
+      setStats(statsResponse.data || null);
     } catch (err) {
       console.error(
         "PROCUREMENT DATA ERROR:",
@@ -725,6 +731,58 @@ const ControllerPage = ({ onBack }) => {
             Refresh
           </button>
         </div>
+
+        {/* PROCUREMENT CENTRE DETAILS */}
+        {!loading && stats && (
+          <div className="mb-10">
+            <h2 className="font-serif text-xl text-blue-950 mb-4 flex items-center gap-2">
+              <Building2 size={20} className="text-blue-800" />
+              Procurement Centre Details
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+              {[
+                { label: "Centralized Procurement Centre", value: stats.centreDetails?.centralized ?? 0, emoji: "🏢" },
+                { label: "Mobile Purchase Centre", value: stats.centreDetails?.mobile ?? 0, emoji: "🚛" },
+                { label: "FPO / FPC Purchase Centre", value: stats.centreDetails?.fpofpc ?? 0, emoji: "🌾" },
+                { label: "SHG Purchase Centre", value: stats.centreDetails?.shg ?? 0, emoji: "👨‍🌾" },
+                { label: "Society Purchase Centre", value: stats.centreDetails?.society ?? 0, emoji: "🏠" },
+              ].map((item) => (
+                <div key={item.label} className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm flex flex-col items-start gap-3">
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-2xl">{item.emoji}</span>
+                    <span className="text-2xl font-bold text-blue-900 font-serif">{item.value}</span>
+                  </div>
+                  <p className="text-xs text-slate-500 leading-snug">{item.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* KMS STATS */}
+        {!loading && stats && (
+          <div className="mb-10">
+            <h2 className="font-serif text-xl text-blue-950 mb-4 flex items-center gap-2">
+              <BarChart3 size={20} className="text-blue-800" />
+              Procurement Details For KMS
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+              {[
+                { label: "REGISTERED FARMERS", value: formatNumber(stats.kms?.registeredFarmers ?? 0), icon: Users },
+                { label: "PROCURED QUANTITY", value: `${formatNumber(stats.kms?.procuredQuantity ?? 0)} MT`, icon: Wheat },
+                { label: "VALUE OF PROCURED PADDY", value: formatINR(stats.kms?.totalValue ?? 0), icon: IndianRupee },
+                { label: "DISPATCH TO RICE MILL", value: `${formatNumber(stats.kms?.dispatchToRiceMill ?? 0)} MT`, icon: Warehouse },
+                { label: "FARMERS BENEFITTED", value: formatNumber(stats.kms?.farmersBenefitted ?? 0), icon: BadgeCheck },
+              ].map((item) => (
+                <div key={item.label} className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+                  <item.icon size={20} className="text-orange-500 mb-3" />
+                  <p className="text-[11px] font-semibold tracking-wide text-slate-400 uppercase mb-1">{item.label}</p>
+                  <p className="text-xl font-bold text-blue-900 font-serif">{item.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* DASHBOARD STATS */}
         {!loading &&
@@ -1821,7 +1879,7 @@ const GovtLogin = () => {
             <div className="text-left leading-tight">
 
               <p className="font-serif text-lg font-bold text-blue-950">
-                Krishi Procurement Portal
+                Fasal Setu
               </p>
 
               <p className="text-[11px] text-slate-500">
@@ -2131,7 +2189,7 @@ const GovtLogin = () => {
               />
 
               <span>
-                Krishi Procurement Portal
+                Fasal Setu
               </span>
             </div>
 

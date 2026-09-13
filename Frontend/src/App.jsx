@@ -29,6 +29,12 @@ function App() {
   return (
     <Routes>
 
+      {/* ================= ADDHAR ================= */}
+      <Route
+        path="/admin-aadhar"
+        element={<AdminAadhaarCheck />}
+      />
+
       {/* ================= LANDING PAGE ================= */}
       <Route
         path="/"

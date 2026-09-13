@@ -3,15 +3,15 @@ import { useNavigate, NavLink } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
 import {
+  Sprout,
   ShieldCheck,
-  Landmark,
-  Wheat,
   Leaf,
+  Wheat,
+  Landmark,
   Phone,
   ArrowRight,
   AlertCircle,
   CheckCircle2,
-  BadgeCheck,
 } from "lucide-react";
 
 const API_URL = "http://localhost:3000/api/aadhaar/check";
@@ -70,90 +70,91 @@ export default function GovtAadhaarCheck() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#eef5ed] px-4 py-8 flex items-center justify-center">
+    <div className="relative min-h-screen overflow-hidden bg-brand-bg px-4 py-8 flex items-center justify-center">
 
       {/* =====================================================
-          GOVERNMENT / AGRICULTURE BACKGROUND
+          FARM BACKGROUND
       ====================================================== */}
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
 
-        {/* Background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#e8f3ed] via-[#f7faf5] to-[#d8ead8]" />
+        {/* Sky */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#e3f6fb] via-[#eafaf5] to-[#bfe8d9]" />
 
-        {/* Green government glow */}
+        {/* Sun */}
         <motion.div
-          className="absolute -left-20 -top-20 h-80 w-80 rounded-full bg-emerald-400/10 blur-3xl"
+          className="absolute right-[12%] top-[8%] h-32 w-32 rounded-full bg-yellow-300/40 blur-md"
           animate={{
-            scale: [1, 1.15, 1],
-            opacity: [0.4, 0.7, 0.4],
+            scale: [1, 1.12, 1],
+            opacity: [0.35, 0.6, 0.35],
           }}
           transition={{
-            duration: 6,
+            duration: 5,
             repeat: Infinity,
+            ease: "easeInOut",
           }}
         />
 
-        {/* Orange glow */}
+        {/* Clouds */}
         <motion.div
-          className="absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-orange-400/10 blur-3xl"
+          className="absolute left-[8%] top-[12%] h-10 w-32 rounded-full bg-white/60 blur-md"
           animate={{
-            scale: [1, 1.2, 1],
+            x: [0, 30, 0],
+          }}
+          transition={{
+            duration: 12,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+
+        <motion.div
+          className="absolute right-[25%] top-[20%] h-8 w-24 rounded-full bg-white/50 blur-md"
+          animate={{
+            x: [0, -25, 0],
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+
+        {/* Floating Leaf - Left */}
+        <motion.div
+          className="absolute left-[5%] top-[25%] text-brand-green/25"
+          animate={{
+            y: [0, -30, 0],
+            rotate: [0, 15, -10, 0],
           }}
           transition={{
             duration: 7,
             repeat: Infinity,
-          }}
-        />
-
-        {/* Ashoka-style circle */}
-        <motion.div
-          className="absolute left-[8%] top-[12%] flex h-32 w-32 items-center justify-center rounded-full border border-slate-400/10"
-          animate={{
-            rotate: 360,
-          }}
-          transition={{
-            duration: 30,
-            repeat: Infinity,
-            ease: "linear",
+            ease: "easeInOut",
           }}
         >
-          <div className="h-20 w-20 rounded-full border border-slate-400/10" />
+          <Leaf size={100} strokeWidth={1} />
         </motion.div>
 
-        {/* Floating agriculture leaves */}
-
+        {/* Floating Leaf - Right */}
         <motion.div
-          className="absolute left-[4%] bottom-[20%] text-green-700/10"
+          className="absolute right-[5%] top-[38%] text-brand-teal/25"
           animate={{
-            y: [0, -25, 0],
-            rotate: [-10, 10, -10],
-          }}
-          transition={{
-            duration: 7,
-            repeat: Infinity,
-          }}
-        >
-          <Leaf size={150} strokeWidth={1} />
-        </motion.div>
-
-        <motion.div
-          className="absolute right-[4%] top-[20%] text-green-700/10"
-          animate={{
-            y: [0, 30, 0],
-            rotate: [10, -10, 10],
+            y: [0, 35, 0],
+            rotate: [0, -20, 10, 0],
           }}
           transition={{
             duration: 8,
             repeat: Infinity,
+            ease: "easeInOut",
           }}
         >
-          <Leaf size={130} strokeWidth={1} />
+          <Leaf size={120} strokeWidth={1} />
         </motion.div>
 
         {/* Wheat */}
         <motion.div
-          className="absolute bottom-[2%] right-[12%] text-yellow-700/10"
+          className="absolute bottom-[4%] left-[2%] text-yellow-700/20"
           animate={{
             rotate: [-4, 4, -4],
           }}
@@ -165,24 +166,39 @@ export default function GovtAadhaarCheck() {
           <Wheat size={160} strokeWidth={1} />
         </motion.div>
 
-        {/* Decorative lines */}
-        <div className="absolute bottom-0 left-0 h-1 w-full bg-gradient-to-r from-orange-400 via-white to-green-600 opacity-60" />
+        <motion.div
+          className="absolute bottom-[2%] right-[3%] text-yellow-700/20"
+          animate={{
+            rotate: [4, -4, 4],
+          }}
+          transition={{
+            duration: 4,
+            repeat: Infinity,
+          }}
+        >
+          <Wheat size={140} strokeWidth={1} />
+        </motion.div>
 
-        {/* Particles */}
-        {[...Array(12)].map((_, i) => (
+        {/* Field */}
+        <div className="absolute -bottom-52 -left-[10%] h-[400px] w-[120%] rounded-[50%] bg-brand-green/20" />
+
+        <div className="absolute -bottom-64 -left-[15%] h-[400px] w-[130%] rounded-[50%] bg-brand-deep/10" />
+
+        {/* Floating particles */}
+        {[...Array(15)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute h-1.5 w-1.5 rounded-full bg-emerald-600/20"
+            className="absolute h-2 w-2 rounded-full bg-brand-teal/25"
             style={{
-              left: `${(i * 23) % 100}%`,
-              top: `${(i * 31) % 100}%`,
+              left: `${(i * 17) % 100}%`,
+              top: `${(i * 29) % 100}%`,
             }}
             animate={{
-              y: [0, -20, 0],
-              opacity: [0.2, 0.8, 0.2],
+              y: [0, -25, 0],
+              opacity: [0.15, 0.7, 0.15],
             }}
             transition={{
-              duration: 3 + (i % 3),
+              duration: 3 + (i % 4),
               repeat: Infinity,
               delay: i * 0.2,
             }}
@@ -191,68 +207,57 @@ export default function GovtAadhaarCheck() {
       </div>
 
       {/* =====================================================
-          MAIN CONTAINER
+          MAIN
       ====================================================== */}
 
       <div className="relative z-10 w-full max-w-md">
 
-        {/* =====================================================
-            GOVERNMENT BRAND
-        ====================================================== */}
-
+        {/* Brand */}
         <motion.div
           initial={{ opacity: 0, y: -30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7 }}
           className="mb-7 text-center"
         >
-
           <div className="mb-3 flex items-center justify-center gap-3">
 
-            {/* 3D Government Logo */}
+            {/* Logo */}
             <motion.div
               whileHover={{
                 rotateY: 180,
                 scale: 1.08,
               }}
-              transition={{
-                duration: 0.7,
-              }}
-              className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-700 via-green-700 to-green-900 shadow-xl shadow-green-900/20"
+              transition={{ duration: 0.7 }}
+              className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-xl shadow-brand-deep/20"
               style={{
                 transformStyle: "preserve-3d",
               }}
             >
-              <Landmark
-                size={32}
-                className="text-white"
-                strokeWidth={1.7}
+              <img
+                src="/logo-icon.png"
+                alt="Fasal Setu logo"
+                className="h-11 w-11 object-contain"
               />
-
-              {/* 3D border */}
-              <div className="absolute inset-1 rounded-xl border border-white/20" />
             </motion.div>
 
             <div className="text-left">
-              <h1 className="text-2xl font-black tracking-tight text-slate-900">
-                Farmer AI
+              <h1 className="text-2xl font-black tracking-tight text-brand-deep">
+                Fasal Setu
               </h1>
 
-              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-700">
-                Government Portal
+              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-teal">
+                Staff Portal
               </p>
             </div>
-
           </div>
 
-          <p className="text-sm font-medium text-slate-600">
-            Digital Agriculture & Farmer Welfare System
+          <p className="text-sm text-brand-deep/60">
+            Digital Agriculture & Government Welfare System
           </p>
-
         </motion.div>
 
         {/* =====================================================
-            3D VERIFICATION CARD
+            3D CARD
         ====================================================== */}
 
         <motion.div
@@ -271,8 +276,8 @@ export default function GovtAadhaarCheck() {
             ease: "easeOut",
           }}
           whileHover={{
-            rotateX: 1,
-            rotateY: -1,
+            rotateX: 1.5,
+            rotateY: -1.5,
             scale: 1.008,
           }}
           style={{
@@ -281,25 +286,25 @@ export default function GovtAadhaarCheck() {
         >
 
           <div
-            className="relative overflow-hidden rounded-[30px] border border-white/80 bg-white/80 p-8 shadow-[0_35px_90px_rgba(20,70,45,0.18)] backdrop-blur-2xl"
+            className="relative overflow-hidden rounded-[32px] border border-white/80 bg-white/75 p-8 shadow-[0_35px_90px_rgba(30,90,40,0.22)] backdrop-blur-2xl"
             style={{
               transformStyle: "preserve-3d",
             }}
           >
 
-            {/* Card glow */}
-            <div className="absolute -right-24 -top-24 h-56 w-56 rounded-full bg-emerald-400/10 blur-3xl" />
+            {/* Card Glow */}
+            <div className="absolute -right-24 -top-24 h-56 w-56 rounded-full bg-brand-teal/20 blur-3xl" />
 
-            <div className="absolute -bottom-24 -left-24 h-56 w-56 rounded-full bg-orange-400/10 blur-3xl" />
+            <div className="absolute -bottom-24 -left-24 h-56 w-56 rounded-full bg-amber-300/20 blur-3xl" />
 
             {/* =================================================
-                SECURITY ICON
+                SHIELD
             ================================================== */}
 
             <motion.div
               initial={{
                 scale: 0,
-                rotate: -20,
+                rotate: -25,
               }}
               animate={{
                 scale: 1,
@@ -310,18 +315,18 @@ export default function GovtAadhaarCheck() {
                 type: "spring",
                 stiffness: 180,
               }}
-              className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-[24px] bg-gradient-to-br from-emerald-700 via-green-700 to-green-950 shadow-2xl shadow-green-900/25"
+              className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-[25px] bg-gradient-to-br from-brand-deep via-brand-teal to-brand-green shadow-2xl shadow-brand-teal/30"
             >
 
               <ShieldCheck
-                size={43}
+                size={42}
                 className="text-white"
-                strokeWidth={1.6}
+                strokeWidth={1.7}
               />
 
-              {/* Pulse */}
+              {/* Pulse ring */}
               <motion.div
-                className="absolute inset-0 rounded-[24px] border-2 border-emerald-400/40"
+                className="absolute inset-0 rounded-[25px] border-2 border-brand-teal/50"
                 animate={{
                   scale: [1, 1.25, 1],
                   opacity: [0.8, 0, 0.8],
@@ -331,7 +336,6 @@ export default function GovtAadhaarCheck() {
                   repeat: Infinity,
                 }}
               />
-
             </motion.div>
 
             {/* =================================================
@@ -340,20 +344,19 @@ export default function GovtAadhaarCheck() {
 
             <div className="mb-7 text-center">
 
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800">
-                <BadgeCheck size={14} />
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-brand-mint px-3 py-1.5 text-xs font-bold text-brand-green">
+                <CheckCircle2 size={13} />
                 Official Verification
               </div>
 
-              <h2 className="text-3xl font-black tracking-tight text-slate-900">
+              <h2 className="text-3xl font-black tracking-tight text-brand-deep">
                 Verify Aadhaar
               </h2>
 
               <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-slate-600">
                 Enter your registered mobile number to
-                securely access the Government Farmer AI portal.
+                securely access the Staff Portal.
               </p>
-
             </div>
 
             {/* =================================================
@@ -365,17 +368,16 @@ export default function GovtAadhaarCheck() {
               className="space-y-5"
             >
 
-              {/* Mobile input */}
-
+              {/* Mobile */}
               <div>
 
                 <label
                   htmlFor="phone"
-                  className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-800"
+                  className="mb-2 flex items-center gap-2 text-sm font-bold text-brand-deep"
                 >
                   <Phone
                     size={15}
-                    className="text-emerald-700"
+                    className="text-brand-teal"
                   />
 
                   Registered mobile number
@@ -395,20 +397,20 @@ export default function GovtAadhaarCheck() {
                       )
                     }
                     placeholder="9876543210"
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50/80 px-5 py-4 text-lg font-semibold tracking-wider text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-600/10"
+                    className="w-full rounded-2xl border border-brand-teal/30 bg-brand-mint/40 px-5 py-4 text-lg font-semibold tracking-wider text-brand-deep outline-none transition-all placeholder:text-brand-deep/30 focus:border-brand-teal focus:bg-white focus:ring-4 focus:ring-brand-teal/10"
                   />
 
-                  {/* Animated green line */}
+                  {/* Animated underline */}
                   <motion.div
-                    className="absolute bottom-0 left-5 right-5 h-1 origin-left rounded-full bg-gradient-to-r from-orange-400 via-white to-green-600"
+                    className="absolute bottom-0 left-4 right-4 h-1 rounded-full bg-gradient-to-r from-brand-teal to-brand-green"
                     initial={{
                       scaleX: 0,
                     }}
-                    animate={{
+                    whileInView={{
                       scaleX: 1,
                     }}
                     transition={{
-                      duration: 1.2,
+                      duration: 1,
                     }}
                   />
 
@@ -416,7 +418,7 @@ export default function GovtAadhaarCheck() {
 
                 <p className="mt-2 text-xs text-slate-500">
                   Your mobile number is used to verify your
-                  registered government account.
+                  registered Staff account.
                 </p>
 
               </div>
@@ -461,10 +463,10 @@ export default function GovtAadhaarCheck() {
                 whileTap={{
                   scale: 0.97,
                 }}
-                className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-800 via-green-700 to-emerald-800 py-4 font-bold text-white shadow-xl shadow-green-900/20 disabled:cursor-not-allowed disabled:opacity-60"
+                className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl bg-gradient-to-r from-brand-deep via-brand-teal to-brand-green py-4 font-bold text-white shadow-xl shadow-brand-teal/25"
               >
 
-                {/* Shine animation */}
+                {/* Button Shine */}
                 <motion.div
                   className="absolute inset-y-0 -left-24 w-20 skew-x-[-20deg] bg-white/20"
                   animate={{
@@ -539,7 +541,7 @@ export default function GovtAadhaarCheck() {
                 <div className="flex gap-3">
 
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100">
-                    <Leaf
+                    <Sprout
                       size={20}
                       className="text-amber-700"
                     />
@@ -566,7 +568,7 @@ export default function GovtAadhaarCheck() {
                       }}
                       className="mt-3 inline-flex items-center gap-2 rounded-lg bg-amber-200/70 px-3 py-2 text-xs font-bold text-amber-900"
                     >
-                      Visit UIDAI
+                      Register on UIDAI
                       <ArrowRight size={14} />
                     </motion.a>
 
@@ -578,10 +580,10 @@ export default function GovtAadhaarCheck() {
             )}
 
             {/* =================================================
-                GOVERNMENT LOGIN
+                LOGIN
             ================================================== */}
 
-            <div className="mt-7 border-t border-slate-200 pt-5 text-center">
+            <div className="mt-7 border-t border-brand-deep/10 pt-5 text-center">
 
               <p className="text-xs text-slate-500">
                 Already verified?
@@ -589,9 +591,9 @@ export default function GovtAadhaarCheck() {
 
               <NavLink
                 to="/government-login"
-                className="mt-1 inline-flex items-center gap-1 text-sm font-bold text-emerald-700 transition hover:text-emerald-900"
+                className="mt-1 inline-flex items-center gap-1 text-sm font-bold text-brand-teal transition hover:text-brand-deep"
               >
-                Go to Government Login
+                Go to Staff Login
                 <ArrowRight size={14} />
               </NavLink>
 
@@ -602,7 +604,7 @@ export default function GovtAadhaarCheck() {
         </motion.div>
 
         {/* =====================================================
-            GOVERNMENT FEATURES
+            FARM FEATURES
         ====================================================== */}
 
         <motion.div
@@ -618,20 +620,20 @@ export default function GovtAadhaarCheck() {
             delay: 0.6,
             duration: 0.7,
           }}
-          className="mt-7 flex flex-wrap justify-center gap-2"
+          className="mt-7 flex flex-wrap items-center justify-center gap-2"
         >
 
-          <div className="flex items-center gap-2 rounded-full border border-emerald-200 bg-white/60 px-4 py-2 text-xs font-bold text-emerald-800 shadow-sm backdrop-blur">
+          <div className="flex items-center gap-2 rounded-full border border-brand-teal/20 bg-white/60 px-4 py-2 text-xs font-bold text-brand-green shadow-sm backdrop-blur">
             <ShieldCheck size={14} />
             Secure
           </div>
 
-          <div className="flex items-center gap-2 rounded-full border border-emerald-200 bg-white/60 px-4 py-2 text-xs font-bold text-emerald-800 shadow-sm backdrop-blur">
+          <div className="flex items-center gap-2 rounded-full border border-brand-teal/20 bg-white/60 px-4 py-2 text-xs font-bold text-brand-green shadow-sm backdrop-blur">
             <Landmark size={14} />
             Government
           </div>
 
-          <div className="flex items-center gap-2 rounded-full border border-emerald-200 bg-white/60 px-4 py-2 text-xs font-bold text-emerald-800 shadow-sm backdrop-blur">
+          <div className="flex items-center gap-2 rounded-full border border-brand-teal/20 bg-white/60 px-4 py-2 text-xs font-bold text-brand-green shadow-sm backdrop-blur">
             <Wheat size={14} />
             Agriculture
           </div>
@@ -640,12 +642,18 @@ export default function GovtAadhaarCheck() {
 
         {/* Footer */}
         <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1 }}
-          className="mt-5 text-center text-[10px] font-bold tracking-[0.18em] text-slate-500/60"
+          initial={{
+            opacity: 0,
+          }}
+          animate={{
+            opacity: 1,
+          }}
+          transition={{
+            delay: 1,
+          }}
+          className="mt-5 text-center text-[10px] font-bold tracking-[0.2em] text-brand-deep/35"
         >
-          FARMER AI • GOVERNMENT PORTAL • DIGITAL AGRICULTURE
+          FASAL SETU • GOVERNMENT PORTAL • DIGITAL AGRICULTURE
         </motion.p>
 
       </div>

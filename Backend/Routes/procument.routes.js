@@ -12,6 +12,7 @@ import {
   acceptProcurement,
   rejectProcurement,
   getProcurementDashboard,
+  getProcurementStats,
 } from "../Controller/procument.controller.js";
 
 const router = express.Router();
@@ -84,6 +85,16 @@ router.patch(
 router.get(
   "/dashboard",
   getProcurementDashboard
+);
+
+// ==========================================
+// Procurement centre stats (centre type counts + KMS)
+// GET /api/procurement/stats
+// ==========================================
+
+router.get(
+  "/stats",
+  getProcurementStats
 );
 
 export default router;

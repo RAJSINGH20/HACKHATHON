@@ -15,6 +15,7 @@ import authRoutes from "./Routes/user.routes.js";
 import bookingRoutes from "./Routes/booking.routes.js";
 import aadhaarRoutes from "./Routes/Addhar.routes.js";
 import procurementRoutes from "./Routes/procument.routes.js";
+import chatRoutes from "./Routes/chat.route.js";
 import dns from "dns";
 
 // Use Google DNS (8.8.8.8, 8.8.4.4) instead of system default
@@ -53,6 +54,10 @@ app.use(
 app.use(
   "/api/procurement",
   procurementRoutes
+);
+app.use(
+  "/api/chats",
+  chatRoutes
 );
 
 app.get("/", (req, res) => {

@@ -76,7 +76,7 @@ const GovtLogin = () => {
           variants={itemVariants}
           className="text-3xl font-bold text-center text-green-700"
         >
-          Government Login
+          Staff Login
         </motion.h1>
 
         <motion.p variants={itemVariants} className="text-center text-gray-500 mt-2">

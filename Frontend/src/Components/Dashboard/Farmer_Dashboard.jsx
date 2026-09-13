@@ -16,8 +16,6 @@ import {
   Clock3,
   ChevronRight,
   Sun,
-  Award,
-  TrendingUp,
   Phone,
   Package,
   Menu,
@@ -26,6 +24,9 @@ import {
   Building2,
   XCircle,
   ClipboardCheck,
+  Bot,
+  Send,
+  LoaderCircle,
 } from "lucide-react";
 
 // ======================================================
@@ -80,7 +81,6 @@ const SERVICE_DETAILS = {
       },
     ],
   },
-
   equipment: {
     title: "Equipment rental",
     items: [
@@ -98,7 +98,6 @@ const SERVICE_DETAILS = {
       },
     ],
   },
-
   delivery: {
     title: "Mandi delivery",
     items: [
@@ -112,7 +111,6 @@ const SERVICE_DETAILS = {
       },
     ],
   },
-
   irrigation: {
     title: "Irrigation support",
     items: [
@@ -188,15 +186,9 @@ const normalizeBooking = (booking) => ({
     booking.contactNumber ||
     null,
 
-  service:
-    booking.service ||
-    booking.product ||
-    "Booking",
+  service: booking.service || booking.product || "Booking",
 
-  product:
-    booking.product ||
-    booking.service ||
-    null,
+  product: booking.product || booking.service || null,
 
   quantity:
     booking.quantity ??
@@ -212,11 +204,9 @@ const normalizeBooking = (booking) => ({
     booking.quantity ??
     0,
 
-  verifiedQuantity:
-    booking.verifiedQuantity ?? null,
+  verifiedQuantity: booking.verifiedQuantity ?? null,
 
-  qualityGrade:
-    booking.qualityGrade ?? null,
+  qualityGrade: booking.qualityGrade ?? null,
 
   decision:
     booking.decision ||
@@ -234,15 +224,11 @@ const normalizeBooking = (booking) => ({
     booking.amount ??
     0,
 
-  paymentStatus:
-    booking.paymentStatus ||
-    "Pending",
+  paymentStatus: booking.paymentStatus || "Pending",
 
-  rejectionReason:
-    booking.rejectionReason || "",
+  rejectionReason: booking.rejectionReason || "",
 
-  status:
-    booking.status || "Pending",
+  status: booking.status || "Pending",
 
   slotStart:
     booking.slotStart ||
@@ -275,11 +261,9 @@ const normalizeBooking = (booking) => ({
     booking.createdAt ||
     null,
 
-  createdAt:
-    booking.createdAt || null,
+  createdAt: booking.createdAt || null,
 
-  checkedAt:
-    booking.checkedAt || null,
+  checkedAt: booking.checkedAt || null,
 
   raw: booking,
 });
@@ -379,7 +363,10 @@ const DetailRow = ({ label, value }) =>
   value !== undefined &&
   value !== "" ? (
     <div className="flex items-center justify-between gap-4 py-1.5 border-b border-stone-100 last:border-0">
-      <span className="text-xs text-stone-500">{label}</span>
+      <span className="text-xs text-stone-500">
+        {label}
+      </span>
+
       <span className="text-sm font-medium text-stone-800 text-right">
         {value}
       </span>
@@ -395,14 +382,29 @@ const Farmer_Dashboard = () => {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeService, setActiveService] = useState(null);
-
   const [showPayments, setShowPayments] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
 
   const [bookings, setBookings] = useState([]);
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // ====================================================
+  // AI AGENT STATE
+  // ====================================================
+
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiInput, setAiInput] = useState("");
+  const [aiTyping, setAiTyping] = useState(false);
+  const [aiHistory, setAiHistory] = useState([]);
+
+  const [aiMessages, setAiMessages] = useState([
+    {
+      from: "bot",
+      text:
+        "Namaste! 👋 I'm Kisan AI.\n\nAsk me about your bookings, crops, procurement, payments, slots or Farmer AI.",
+    },
+  ]);
 
   // ====================================================
   // FETCH FARMER BOOKINGS
@@ -457,13 +459,101 @@ const Farmer_Dashboard = () => {
   }, []);
 
   // ====================================================
+  // AI CHAT
+  // ====================================================
+
+  const sendAIMessage = async (text = aiInput) => {
+    const message = text.trim();
+
+    if (!message || aiTyping) return;
+
+    setAiMessages((prev) => [
+      ...prev,
+      {
+        from: "user",
+        text: message,
+      },
+    ]);
+
+    setAiInput("");
+    setAiTyping(true);
+
+    try {
+      const response = await axios.post(
+        `${API_URL}/api/chats/FamerAIChatController`,
+        {
+          message: message,
+          history: aiHistory,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          timeout: 60000,
+        }
+      );
+
+      const data = response.data;
+
+      if (!data.success) {
+        throw new Error(
+          data.message || "AI request failed"
+        );
+      }
+
+      setAiHistory(data.history || []);
+
+      setAiMessages((prev) => [
+        ...prev,
+        {
+          from: "bot",
+          text:
+            data.answer ||
+            "Sorry, I couldn't generate an answer.",
+        },
+      ]);
+
+      if (data.booking) {
+        fetchBookings();
+      }
+    } catch (error) {
+      console.error("AI CHAT ERROR:", error);
+
+      let errorMessage =
+        "Sorry, I couldn't connect to Kisan AI.";
+
+      if (error.response) {
+        errorMessage =
+          error.response.data?.message ||
+          `Backend error: ${error.response.status}`;
+      } else if (error.request) {
+        errorMessage =
+          "Cannot connect to the Farmer AI server. Please make sure your backend is running on port 3000.";
+      } else {
+        errorMessage =
+          error.message ||
+          "Something went wrong.";
+      }
+
+      setAiMessages((prev) => [
+        ...prev,
+        {
+          from: "bot",
+          text: errorMessage,
+        },
+      ]);
+    } finally {
+      setAiTyping(false);
+    }
+  };
+
+  // ====================================================
   // ACTIVE BOOKINGS
   // ====================================================
 
   const activeBookings = useMemo(() => {
     return bookings.filter(
-      (booking) =>
-        booking.status !== "Cancelled"
+      (booking) => booking.status !== "Cancelled"
     );
   }, [bookings]);
 
@@ -473,8 +563,7 @@ const Farmer_Dashboard = () => {
 
   const acceptedBookings = useMemo(() => {
     return bookings.filter(
-      (booking) =>
-        booking.decision === "Accepted"
+      (booking) => booking.decision === "Accepted"
     );
   }, [bookings]);
 
@@ -482,9 +571,7 @@ const Farmer_Dashboard = () => {
     return acceptedBookings.reduce(
       (sum, booking) =>
         sum +
-        Number(
-          booking.verifiedQuantity || 0
-        ),
+        Number(booking.verifiedQuantity || 0),
       0
     );
   }, [acceptedBookings]);
@@ -493,9 +580,7 @@ const Farmer_Dashboard = () => {
     return acceptedBookings.reduce(
       (sum, booking) =>
         sum +
-        Number(
-          booking.procurementAmount || 0
-        ),
+        Number(booking.procurementAmount || 0),
       0
     );
   }, [acceptedBookings]);
@@ -524,14 +609,11 @@ const Farmer_Dashboard = () => {
     {
       key: "bookings",
       label: "Active bookings",
-      value: String(
-        activeBookings.length
-      ),
+      value: String(activeBookings.length),
       icon: Calendar,
       from: "from-amber-400",
       to: "to-amber-600",
     },
-
     {
       key: "accepted",
       label: "Accepted quantity",
@@ -542,24 +624,18 @@ const Farmer_Dashboard = () => {
       from: "from-green-500",
       to: "to-green-700",
     },
-
     {
       key: "payments",
       label: "Payments received",
-      value: formatINR(
-        totalPaidAmount
-      ),
+      value: formatINR(totalPaidAmount),
       icon: Wallet,
       from: "from-emerald-500",
       to: "to-emerald-700",
     },
-
     {
       key: "procurement",
       label: "Procurement value",
-      value: formatINR(
-        totalProcurementAmount
-      ),
+      value: formatINR(totalProcurementAmount),
       icon: IndianRupee,
       from: "from-blue-500",
       to: "to-blue-700",
@@ -581,14 +657,13 @@ const Farmer_Dashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 via-stone-50 to-stone-100 font-sans text-stone-800 pb-16">
 
-      {/* ==================================================
-          TOP BAR
-      ================================================== */}
+      {/* TOP BAR */}
 
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md shadow-sm">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-3">
 
           <div className="flex items-center gap-3">
+
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-green-800 shadow-lg flex items-center justify-center text-white font-bold font-serif">
               F
             </div>
@@ -603,6 +678,7 @@ const Farmer_Dashboard = () => {
                 Procurement & Farmer Portal
               </p>
             </div>
+
           </div>
 
           <div className="flex items-center gap-3">
@@ -624,9 +700,7 @@ const Farmer_Dashboard = () => {
             <button
               className="sm:hidden"
               onClick={() =>
-                setMenuOpen(
-                  (value) => !value
-                )
+                setMenuOpen((value) => !value)
               }
             >
               {menuOpen ? (
@@ -635,15 +709,14 @@ const Farmer_Dashboard = () => {
                 <Menu size={20} />
               )}
             </button>
+
           </div>
         </div>
       </header>
 
       <div className="max-w-6xl mx-auto px-6">
 
-        {/* ==================================================
-            WELCOME
-        ================================================== */}
+        {/* WELCOME */}
 
         <div className="relative mt-6 rounded-3xl overflow-hidden shadow-2xl">
 
@@ -670,12 +743,11 @@ const Farmer_Dashboard = () => {
               verification and payments —
               all in one place.
             </p>
+
           </div>
         </div>
 
-        {/* ==================================================
-            STATS
-        ================================================== */}
+        {/* STATS */}
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-5 -mt-8 relative z-10">
 
@@ -692,6 +764,7 @@ const Farmer_Dashboard = () => {
                 key={key}
                 className="bg-white rounded-2xl shadow-xl p-5 pt-8 relative"
               >
+
                 <div
                   className={`absolute -top-5 left-5 w-12 h-12 rounded-2xl bg-gradient-to-br ${from} ${to} shadow-lg flex items-center justify-center`}
                 >
@@ -708,14 +781,14 @@ const Farmer_Dashboard = () => {
                 <p className="text-xl font-bold text-green-900 font-serif mt-1">
                   {value}
                 </p>
+
               </div>
             )
           )}
+
         </div>
 
-        {/* ==================================================
-            QUICK SERVICES
-        ================================================== */}
+        {/* QUICK SERVICES */}
 
         <div className="mt-12">
 
@@ -735,12 +808,11 @@ const Farmer_Dashboard = () => {
                 <button
                   key={section}
                   onClick={() =>
-                    setActiveService(
-                      section
-                    )
+                    setActiveService(section)
                   }
                   className={`bg-white rounded-2xl shadow-lg p-5 text-left ${rotate} hover:rotate-0 hover:-translate-y-1 hover:shadow-2xl transition-transform`}
                 >
+
                   <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-green-600 to-green-800 shadow-md flex items-center justify-center mb-3">
                     <Icon
                       size={18}
@@ -756,21 +828,22 @@ const Farmer_Dashboard = () => {
                     View options
                     <ChevronRight size={12} />
                   </span>
+
                 </button>
               )
             )}
+
           </div>
         </div>
 
-        {/* ==================================================
-            BOOKINGS
-        ================================================== */}
+        {/* BOOKINGS */}
 
         <div className="mt-12 bg-white rounded-2xl shadow-lg p-6">
 
           <div className="flex items-center justify-between mb-4">
 
             <div>
+
               <h3 className="font-serif text-lg text-green-900">
                 My procurement bookings
               </h3>
@@ -779,31 +852,26 @@ const Farmer_Dashboard = () => {
                 Live data from government procurement
                 records.
               </p>
+
             </div>
 
             <Wheat
               size={18}
               className="text-green-700"
             />
-          </div>
 
-          {/* LOADING */}
+          </div>
 
           {loading && (
             <div className="space-y-3">
-
-              {[1, 2, 3].map(
-                (item) => (
-                  <div
-                    key={item}
-                    className="h-24 rounded-xl bg-stone-100 animate-pulse"
-                  />
-                )
-              )}
+              {[1, 2, 3].map((item) => (
+                <div
+                  key={item}
+                  className="h-24 rounded-xl bg-stone-100 animate-pulse"
+                />
+              ))}
             </div>
           )}
-
-          {/* ERROR */}
 
           {!loading && error && (
             <div className="flex items-start gap-2 bg-red-50 text-red-700 rounded-xl px-4 py-3 text-sm">
@@ -818,18 +886,15 @@ const Farmer_Dashboard = () => {
                 <p>{error}</p>
 
                 <button
-                  onClick={
-                    fetchBookings
-                  }
+                  onClick={fetchBookings}
                   className="mt-1 text-xs font-semibold underline"
                 >
                   Try again
                 </button>
+
               </div>
             </div>
           )}
-
-          {/* EMPTY */}
 
           {!loading &&
             !error &&
@@ -842,189 +907,179 @@ const Farmer_Dashboard = () => {
                 />
 
                 <p className="text-sm text-stone-500">
-                  You don't have any
-                  procurement booking yet.
+                  You don't have any procurement
+                  booking yet.
                 </p>
 
                 <button
-                  onClick={
-                    handleBookingClick
-                  }
+                  onClick={handleBookingClick}
                   className="mt-4 bg-green-700 hover:bg-green-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold"
                 >
                   Book a new slot
                 </button>
+
               </div>
             )}
-
-          {/* BOOKINGS */}
 
           {!loading &&
             !error &&
             bookings.length > 0 && (
               <div className="space-y-4">
 
-                {bookings.map(
-                  (booking) => (
-                    <button
-                      key={booking.id}
-                      type="button"
-                      onClick={() =>
-                        setSelectedBooking(
-                          booking
-                        )
-                      }
-                      className="w-full text-left bg-stone-50 rounded-xl p-4 border-l-4 border-green-600 shadow-sm hover:bg-stone-100 transition-colors"
-                    >
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                {bookings.map((booking) => (
+                  <button
+                    key={booking.id}
+                    type="button"
+                    onClick={() =>
+                      setSelectedBooking(booking)
+                    }
+                    className="w-full text-left bg-stone-50 rounded-xl p-4 border-l-4 border-green-600 shadow-sm hover:bg-stone-100 transition-colors"
+                  >
 
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-5 flex-1">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
 
-                          <div>
-                            <p className="text-xs text-stone-400">
-                              Product
-                            </p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-5 flex-1">
 
-                            <p className="text-sm font-semibold text-stone-800 mt-1">
-                              {booking.product}
-                            </p>
-                          </div>
+                        <div>
+                          <p className="text-xs text-stone-400">
+                            Product
+                          </p>
 
-                          <div>
-                            <p className="text-xs text-stone-400">
-                              Quantity
-                            </p>
-
-                            <p className="text-sm font-semibold text-stone-800 mt-1">
-                              {Number(
-                                booking.offeredQuantity ||
-                                  0
-                              ).toLocaleString(
-                                "en-IN"
-                              )}{" "}
-                              kg
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-xs text-stone-400">
-                              Procurement centre
-                            </p>
-
-                            <p className="text-sm font-semibold text-stone-800 mt-1">
-                              {booking.procurementCenter ||
-                                "Not assigned"}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-xs text-stone-400">
-                              Time slot
-                            </p>
-
-                            <p className="text-sm font-semibold text-stone-800 mt-1">
-                              {booking.slotStart
-                                ? formatTime(
-                                    booking.slotStart
-                                  )
-                                : "Not assigned"}
-                            </p>
-                          </div>
+                          <p className="text-sm font-semibold text-stone-800 mt-1">
+                            {booking.product}
+                          </p>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div>
+                          <p className="text-xs text-stone-400">
+                            Quantity
+                          </p>
 
-                          <ProcurementDecisionPill
-                            decision={
-                              booking.decision
-                            }
-                          />
-
-                          <StatusPill
-                            status={
-                              booking.paymentStatus
-                            }
-                          />
-
-                          <ChevronRight
-                            size={17}
-                            className="text-stone-400"
-                          />
+                          <p className="text-sm font-semibold text-stone-800 mt-1">
+                            {Number(
+                              booking.offeredQuantity || 0
+                            ).toLocaleString("en-IN")}{" "}
+                            kg
+                          </p>
                         </div>
+
+                        <div>
+                          <p className="text-xs text-stone-400">
+                            Procurement centre
+                          </p>
+
+                          <p className="text-sm font-semibold text-stone-800 mt-1">
+                            {booking.procurementCenter ||
+                              "Not assigned"}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-xs text-stone-400">
+                            Time slot
+                          </p>
+
+                          <p className="text-sm font-semibold text-stone-800 mt-1">
+                            {booking.slotStart
+                              ? formatTime(
+                                  booking.slotStart
+                                )
+                              : "Not assigned"}
+                          </p>
+                        </div>
+
                       </div>
 
-                      {/* ACCEPTED SUMMARY */}
+                      <div className="flex flex-wrap items-center gap-2">
 
-                      {booking.decision ===
-                        "Accepted" && (
-                        <div className="mt-4 border-t border-green-200 pt-3 flex flex-wrap gap-x-7 gap-y-2 text-xs text-green-800">
+                        <ProcurementDecisionPill
+                          decision={
+                            booking.decision
+                          }
+                        />
 
-                          <span>
-                            <strong>
-                              Verified:
-                            </strong>{" "}
-                            {Number(
-                              booking.verifiedQuantity ||
-                                0
-                            ).toLocaleString(
-                              "en-IN"
-                            )}{" "}
-                            kg
-                          </span>
+                        <StatusPill
+                          status={
+                            booking.paymentStatus
+                          }
+                        />
 
-                          <span>
-                            <strong>
-                              Grade:
-                            </strong>{" "}
-                            {booking.qualityGrade ||
-                              "—"}
-                          </span>
+                        <ChevronRight
+                          size={17}
+                          className="text-stone-400"
+                        />
 
-                          <span>
-                            <strong>
-                              Rate:
-                            </strong>{" "}
-                            ₹
-                            {Number(
-                              booking.ratePerKg ||
-                                0
-                            )}
-                            /kg
-                          </span>
+                      </div>
 
-                          <span>
-                            <strong>
-                              Amount:
-                            </strong>{" "}
-                            {formatINR(
-                              booking.procurementAmount
-                            )}
-                          </span>
-                        </div>
-                      )}
+                    </div>
 
-                      {/* REJECTED SUMMARY */}
+                    {booking.decision ===
+                      "Accepted" && (
+                      <div className="mt-4 border-t border-green-200 pt-3 flex flex-wrap gap-x-7 gap-y-2 text-xs text-green-800">
 
-                      {booking.decision ===
-                        "Rejected" && (
-                        <div className="mt-4 border-t border-red-200 pt-3 text-xs text-red-800">
+                        <span>
                           <strong>
-                            Rejection reason:
+                            Verified:
                           </strong>{" "}
-                          {booking.rejectionReason ||
-                            "Lot rejected after verification"}
-                        </div>
-                      )}
-                    </button>
-                  )
-                )}
+                          {Number(
+                            booking.verifiedQuantity || 0
+                          ).toLocaleString(
+                            "en-IN"
+                          )}{" "}
+                          kg
+                        </span>
+
+                        <span>
+                          <strong>
+                            Grade:
+                          </strong>{" "}
+                          {booking.qualityGrade || "—"}
+                        </span>
+
+                        <span>
+                          <strong>
+                            Rate:
+                          </strong>{" "}
+                          ₹
+                          {Number(
+                            booking.ratePerKg || 0
+                          )}
+                          /kg
+                        </span>
+
+                        <span>
+                          <strong>
+                            Amount:
+                          </strong>{" "}
+                          {formatINR(
+                            booking.procurementAmount
+                          )}
+                        </span>
+
+                      </div>
+                    )}
+
+                    {booking.decision ===
+                      "Rejected" && (
+                      <div className="mt-4 border-t border-red-200 pt-3 text-xs text-red-800">
+
+                        <strong>
+                          Rejection reason:
+                        </strong>{" "}
+                        {booking.rejectionReason ||
+                          "Lot rejected after verification"}
+
+                      </div>
+                    )}
+
+                  </button>
+                ))}
+
               </div>
             )}
 
           <button
-            onClick={
-              handleBookingClick
-            }
+            onClick={handleBookingClick}
             className="mt-5 bg-green-700 hover:bg-green-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold shadow-md"
           >
             Book a new slot
@@ -1036,25 +1091,28 @@ const Farmer_Dashboard = () => {
           >
             Refresh
           </button>
+
         </div>
 
-        {/* ==================================================
-            PROCUREMENT SUMMARY
-        ================================================== */}
+        {/* PROCUREMENT SUMMARY */}
 
         {acceptedBookings.length > 0 && (
           <div className="mt-8 bg-green-900 rounded-2xl shadow-lg p-6 text-white">
 
             <div className="flex items-center gap-2 mb-5">
+
               <Building2 size={20} />
+
               <h3 className="font-serif text-lg">
                 Procurement summary
               </h3>
+
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
               <div className="bg-white/10 rounded-xl p-4">
+
                 <p className="text-xs text-green-200">
                   Accepted quantity
                 </p>
@@ -1065,9 +1123,11 @@ const Farmer_Dashboard = () => {
                   )}{" "}
                   kg
                 </p>
+
               </div>
 
               <div className="bg-white/10 rounded-xl p-4">
+
                 <p className="text-xs text-green-200">
                   Procurement value
                 </p>
@@ -1077,30 +1137,32 @@ const Farmer_Dashboard = () => {
                     totalProcurementAmount
                   )}
                 </p>
+
               </div>
 
               <div className="bg-white/10 rounded-xl p-4">
+
                 <p className="text-xs text-green-200">
                   Amount received
                 </p>
 
                 <p className="text-xl font-bold mt-1">
-                  {formatINR(
-                    totalPaidAmount
-                  )}
+                  {formatINR(totalPaidAmount)}
                 </p>
+
               </div>
+
             </div>
+
           </div>
         )}
 
-        {/* ==================================================
-            HELP
-        ================================================== */}
+        {/* HELP */}
 
         <div className="mt-8 bg-green-900 rounded-2xl shadow-lg p-6 flex items-center justify-between flex-wrap gap-4">
 
           <div>
+
             <p className="font-serif text-lg text-white">
               Need help?
             </p>
@@ -1109,6 +1171,7 @@ const Farmer_Dashboard = () => {
               Our helpline is open every day,
               7 AM – 8 PM.
             </p>
+
           </div>
 
           <a
@@ -1118,7 +1181,9 @@ const Farmer_Dashboard = () => {
             <Phone size={16} />
             1800-180-1551
           </a>
+
         </div>
+
       </div>
 
       {/* ==================================================
@@ -1128,34 +1193,34 @@ const Farmer_Dashboard = () => {
       {activeService && (
         <Modal
           title={
-            SERVICE_DETAILS[
-              activeService
-            ].title
+            SERVICE_DETAILS[activeService].title
           }
-          onClose={() =>
-            setActiveService(null)
-          }
+          onClose={() => setActiveService(null)}
         >
+
           <div className="space-y-3">
 
             {SERVICE_DETAILS[
               activeService
-            ].items.map(
-              (item, index) => (
-                <div
-                  key={index}
-                  className="bg-stone-50 rounded-xl px-4 py-3 border-l-4 border-green-600"
-                >
-                  <p className="text-sm font-semibold text-stone-800">
-                    {item.name}
-                  </p>
+            ].items.map((item, index) => (
 
-                  <p className="text-xs text-stone-500 mt-0.5">
-                    {item.note}
-                  </p>
-                </div>
-              )
-            )}
+              <div
+                key={index}
+                className="bg-stone-50 rounded-xl px-4 py-3 border-l-4 border-green-600"
+              >
+
+                <p className="text-sm font-semibold text-stone-800">
+                  {item.name}
+                </p>
+
+                <p className="text-xs text-stone-500 mt-0.5">
+                  {item.note}
+                </p>
+
+              </div>
+
+            ))}
+
           </div>
 
           <button
@@ -1167,6 +1232,7 @@ const Farmer_Dashboard = () => {
           >
             Book this service
           </button>
+
         </Modal>
       )}
 
@@ -1184,6 +1250,7 @@ const Farmer_Dashboard = () => {
             setSelectedBooking(null)
           }
         >
+
           <div className="flex items-center justify-between mb-4">
 
             <span className="text-xs text-stone-500">
@@ -1195,29 +1262,24 @@ const Farmer_Dashboard = () => {
                 selectedBooking.decision
               }
             />
+
           </div>
 
           <div className="bg-stone-50 rounded-xl px-4 py-3">
 
             <DetailRow
               label="Farmer"
-              value={
-                selectedBooking.name
-              }
+              value={selectedBooking.name}
             />
 
             <DetailRow
               label="Phone"
-              value={
-                selectedBooking.phone
-              }
+              value={selectedBooking.phone}
             />
 
             <DetailRow
               label="Product"
-              value={
-                selectedBooking.product
-              }
+              value={selectedBooking.product}
             />
 
             <DetailRow
@@ -1353,6 +1415,7 @@ const Farmer_Dashboard = () => {
                   : null
               }
             />
+
           </div>
 
           {selectedBooking.decision ===
@@ -1360,15 +1423,18 @@ const Farmer_Dashboard = () => {
             <div className="mt-4 bg-green-50 border border-green-200 rounded-xl p-4">
 
               <div className="flex items-center gap-2 text-green-800 font-semibold text-sm">
-                <CheckCircle2
-                  size={17}
-                />
+
+                <CheckCircle2 size={17} />
+
                 Procurement accepted
+
               </div>
 
               <p className="text-xs text-green-700 mt-2">
+
                 Government procurement centre
                 must buy{" "}
+
                 <strong>
                   {Number(
                     selectedBooking.verifiedQuantity ||
@@ -1378,18 +1444,23 @@ const Farmer_Dashboard = () => {
                   )}{" "}
                   kg
                 </strong>{" "}
+
                 of{" "}
+
                 <strong>
                   {selectedBooking.product}
                 </strong>{" "}
+
                 for{" "}
+
                 <strong>
                   {formatINR(
                     selectedBooking.procurementAmount
                   )}
-                </strong>
-                .
+                </strong>.
+
               </p>
+
             </div>
           )}
 
@@ -1398,18 +1469,23 @@ const Farmer_Dashboard = () => {
             <div className="mt-4 bg-red-50 border border-red-200 rounded-xl p-4">
 
               <div className="flex items-center gap-2 text-red-800 font-semibold text-sm">
-                <XCircle
-                  size={17}
-                />
+
+                <XCircle size={17} />
+
                 Procurement rejected
+
               </div>
 
               <p className="text-xs text-red-700 mt-2">
+
                 {selectedBooking.rejectionReason ||
                   "Lot rejected after verification."}
+
               </p>
+
             </div>
           )}
+
         </Modal>
       )}
 
@@ -1424,21 +1500,26 @@ const Farmer_Dashboard = () => {
             setShowPayments(false)
           }
         >
-          {acceptedBookings.length ===
-          0 ? (
+
+          {acceptedBookings.length === 0 ? (
+
             <p className="text-sm text-stone-500">
               No accepted procurement
               payments yet.
             </p>
+
           ) : (
+
             <div className="space-y-3">
 
               {acceptedBookings.map(
                 (booking) => (
+
                   <div
                     key={booking.id}
                     className="bg-stone-50 rounded-xl px-4 py-3 border-l-4 border-green-600 flex items-center justify-between gap-4"
                   >
+
                     <div>
 
                       <p className="text-sm font-semibold text-stone-800">
@@ -1446,6 +1527,7 @@ const Farmer_Dashboard = () => {
                       </p>
 
                       <p className="text-xs text-stone-500">
+
                         {Number(
                           booking.verifiedQuantity ||
                             0
@@ -1454,11 +1536,12 @@ const Farmer_Dashboard = () => {
                         )}{" "}
                         kg @ ₹
                         {Number(
-                          booking.ratePerKg ||
-                            0
+                          booking.ratePerKg || 0
                         )}
                         /kg
+
                       </p>
+
                     </div>
 
                     <div className="text-right">
@@ -1474,10 +1557,14 @@ const Farmer_Dashboard = () => {
                           booking.paymentStatus
                         }
                       />
+
                     </div>
+
                   </div>
+
                 )
               )}
+
             </div>
           )}
 
@@ -1488,13 +1575,239 @@ const Farmer_Dashboard = () => {
             </span>
 
             <span className="text-lg font-bold text-green-900 font-serif">
-              {formatINR(
-                totalPaidAmount
-              )}
+              {formatINR(totalPaidAmount)}
             </span>
+
           </div>
+
         </Modal>
       )}
+
+      {/* ==================================================
+          FLOATING KISAN AI
+      ================================================== */}
+
+      <div className="fixed bottom-6 right-6 z-[200]">
+
+        {/* AI CHAT WINDOW */}
+
+        {aiOpen && (
+          <div className="absolute bottom-16 right-0 w-[350px] sm:w-[390px] max-w-[calc(100vw-30px)] bg-white rounded-2xl shadow-2xl border border-green-100 overflow-hidden">
+
+            {/* HEADER */}
+
+            <div className="bg-gradient-to-r from-green-900 to-green-600 px-4 py-4 text-white">
+
+              <div className="flex items-center justify-between">
+
+                <div className="flex items-center gap-3">
+
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                    <Bot size={22} />
+                  </div>
+
+                  <div>
+
+                    <p className="font-semibold">
+                      Kisan AI
+                    </p>
+
+                    <div className="flex items-center gap-1.5">
+
+                      <span className="w-2 h-2 bg-green-300 rounded-full animate-pulse" />
+
+                      <p className="text-xs text-green-100">
+                        Online • Farmer Assistant
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+                <button
+                  onClick={() => setAiOpen(false)}
+                  className="w-8 h-8 rounded-full hover:bg-white/20 flex items-center justify-center"
+                >
+                  <X size={17} />
+                </button>
+
+              </div>
+
+            </div>
+
+            {/* MESSAGES */}
+
+            <div className="h-[380px] overflow-y-auto p-4 space-y-3 bg-stone-50">
+
+              {aiMessages.map(
+                (message, index) => (
+
+                  <div
+                    key={index}
+                    className={`flex ${
+                      message.from === "user"
+                        ? "justify-end"
+                        : "justify-start"
+                    }`}
+                  >
+
+                    <div
+                      className={`max-w-[82%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap ${
+                        message.from === "user"
+                          ? "bg-green-700 text-white rounded-br-sm"
+                          : "bg-white text-stone-700 shadow-sm border border-stone-100 rounded-bl-sm"
+                      }`}
+                    >
+                      {message.text}
+                    </div>
+
+                  </div>
+
+                )
+              )}
+
+              {/* TYPING */}
+
+              {aiTyping && (
+                <div className="flex justify-start">
+
+                  <div className="bg-white border border-stone-100 shadow-sm rounded-2xl rounded-bl-sm px-4 py-3">
+
+                    <div className="flex items-center gap-1">
+
+                      <span className="w-2 h-2 bg-green-600 rounded-full animate-bounce" />
+
+                      <span
+                        className="w-2 h-2 bg-green-600 rounded-full animate-bounce"
+                        style={{
+                          animationDelay:
+                            "150ms",
+                        }}
+                      />
+
+                      <span
+                        className="w-2 h-2 bg-green-600 rounded-full animate-bounce"
+                        style={{
+                          animationDelay:
+                            "300ms",
+                        }}
+                      />
+
+                    </div>
+
+                  </div>
+
+                </div>
+              )}
+
+            </div>
+
+            {/* QUICK QUESTIONS */}
+
+            <div className="px-3 pt-3 bg-white">
+
+              <div className="flex gap-2 overflow-x-auto pb-2">
+
+                {[
+                  "Show my bookings",
+                  "Payment status",
+                  "Explain FCFS",
+                  "My product details",
+                ].map((question) => (
+
+                  <button
+                    key={question}
+                    onClick={() =>
+                      sendAIMessage(question)
+                    }
+                    disabled={aiTyping}
+                    className="whitespace-nowrap text-xs px-3 py-2 rounded-full border border-green-200 text-green-700 hover:bg-green-50 disabled:opacity-50"
+                  >
+                    {question}
+                  </button>
+
+                ))}
+
+              </div>
+
+            </div>
+
+            {/* INPUT */}
+
+            <div className="p-3 bg-white border-t border-stone-100">
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  sendAIMessage();
+                }}
+                className="flex items-center gap-2"
+              >
+
+                <input
+                  type="text"
+                  value={aiInput}
+                  onChange={(e) =>
+                    setAiInput(e.target.value)
+                  }
+                  placeholder="Ask Kisan AI..."
+                  disabled={aiTyping}
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                />
+
+                <button
+                  type="submit"
+                  disabled={
+                    !aiInput.trim() ||
+                    aiTyping
+                  }
+                  className="w-10 h-10 rounded-xl bg-green-700 hover:bg-green-800 disabled:bg-stone-300 text-white flex items-center justify-center"
+                >
+
+                  {aiTyping ? (
+                    <LoaderCircle
+                      size={18}
+                      className="animate-spin"
+                    />
+                  ) : (
+                    <Send size={18} />
+                  )}
+
+                </button>
+
+              </form>
+
+            </div>
+
+          </div>
+        )}
+
+        {/* FLOATING BUTTON */}
+
+        <button
+          onClick={() =>
+            setAiOpen((prev) => !prev)
+          }
+          className="relative w-14 h-14 rounded-full bg-gradient-to-br from-green-600 to-green-900 text-white shadow-2xl flex items-center justify-center hover:scale-110 transition-all duration-200"
+          aria-label="Open Kisan AI"
+        >
+
+          {aiOpen ? (
+            <X size={25} />
+          ) : (
+            <Bot size={25} />
+          )}
+
+          {!aiOpen && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full border-2 border-white animate-pulse" />
+          )}
+
+        </button>
+
+      </div>
+
     </div>
   );
 };

@@ -1287,3 +1287,130 @@ export const getProcurementDashboard =
       });
     }
   };
+
+// ======================================================
+// 7. GET PROCUREMENT STATS (Centre counts + KMS)
+// GET /api/procurement/stats
+// ======================================================
+
+export const getProcurementStats =
+  async (req, res) => {
+    try {
+      // ------------------------------------------------
+      // Import Farmer model dynamically to avoid circular
+      // ------------------------------------------------
+      const { Farmer } = await import("../models/farmer.model.js");
+
+      // ------------------------------------------------
+      // Centre type counts
+      // ------------------------------------------------
+      const centreTypeCounts = await Procurement.aggregate([
+        {
+          $group: {
+            _id: { $ifNull: ["$centreType", "Centralized"] },
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+
+      const centreTypeMap = {
+        Centralized: 0,
+        Mobile: 0,
+        "FPO/FPC": 0,
+        SHG: 0,
+        Society: 0,
+      };
+
+      for (const item of centreTypeCounts) {
+        if (centreTypeMap[item._id] !== undefined) {
+          centreTypeMap[item._id] = item.count;
+        }
+      }
+
+      // ------------------------------------------------
+      // Registered farmers
+      // ------------------------------------------------
+      const registeredFarmers = await Farmer.countDocuments();
+
+      // ------------------------------------------------
+      // Procurement KMS aggregates from all bookings
+      // ------------------------------------------------
+      const kmsAgg = await Procurement.aggregate([
+        { $unwind: "$bookings" },
+        {
+          $group: {
+            _id: null,
+            procuredQuantity: {
+              $sum: {
+                $cond: [
+                  { $eq: ["$bookings.decision", "Accepted"] },
+                  "$bookings.verifiedQuantity",
+                  0,
+                ],
+              },
+            },
+            totalValue: {
+              $sum: {
+                $cond: [
+                  { $eq: ["$bookings.decision", "Accepted"] },
+                  "$bookings.procurementAmount",
+                  0,
+                ],
+              },
+            },
+            farmersBenefitted: {
+              $addToSet: {
+                $cond: [
+                  { $eq: ["$bookings.decision", "Accepted"] },
+                  "$bookings.farmerId",
+                  "$$REMOVE",
+                ],
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            procuredQuantity: 1,
+            totalValue: 1,
+            farmersBenefitted: { $size: "$farmersBenefitted" },
+          },
+        },
+      ]);
+
+      const kms = kmsAgg[0] || {
+        procuredQuantity: 0,
+        totalValue: 0,
+        farmersBenefitted: 0,
+      };
+
+      // Dispatch to rice mill = 90% of accepted quantity (paddy → rice conversion approx)
+      const dispatchToRiceMill = Math.round(kms.procuredQuantity * 0.9);
+
+      return res.status(200).json({
+        success: true,
+        centreDetails: {
+          centralized: centreTypeMap["Centralized"],
+          mobile: centreTypeMap["Mobile"],
+          fpofpc: centreTypeMap["FPO/FPC"],
+          shg: centreTypeMap["SHG"],
+          society: centreTypeMap["Society"],
+        },
+        kms: {
+          registeredFarmers,
+          procuredQuantity: kms.procuredQuantity,
+          totalValue: kms.totalValue,
+          dispatchToRiceMill,
+          farmersBenefitted: kms.farmersBenefitted,
+        },
+      });
+    } catch (error) {
+      console.error("GET PROCUREMENT STATS ERROR:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch procurement stats",
+        error: error.message,
+      });
+    }
+  };

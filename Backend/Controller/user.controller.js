@@ -365,3 +365,20 @@ export const govtLogin = async (req, res) => {
         },
     });
 }
+
+export const getAllFarmers = async (req, res) => {
+    try {
+        const farmers = await Farmer.find();
+        return res.status(200).json({
+            success: true,
+            message: "Farmers retrieved successfully",
+            farmers,
+        });
+    } catch (error) {
+        console.error("ERROR RETRIEVING FARMERS:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Server error",
+        });
+    }
+};

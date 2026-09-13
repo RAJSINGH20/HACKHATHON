@@ -70,7 +70,7 @@ export default function FarmerAadhaarCheck() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#eef7e8] px-4 py-8 flex items-center justify-center">
+    <div className="relative min-h-screen overflow-hidden bg-brand-bg px-4 py-8 flex items-center justify-center">
 
       {/* =====================================================
           FARM BACKGROUND
@@ -79,7 +79,7 @@ export default function FarmerAadhaarCheck() {
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
 
         {/* Sky */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#dff4ff] via-[#f1f9e9] to-[#c5e59d]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#e3f6fb] via-[#eafaf5] to-[#bfe8d9]" />
 
         {/* Sun */}
         <motion.div
@@ -122,7 +122,7 @@ export default function FarmerAadhaarCheck() {
 
         {/* Floating Leaf - Left */}
         <motion.div
-          className="absolute left-[5%] top-[25%] text-green-600/20"
+          className="absolute left-[5%] top-[25%] text-brand-green/25"
           animate={{
             y: [0, -30, 0],
             rotate: [0, 15, -10, 0],
@@ -138,7 +138,7 @@ export default function FarmerAadhaarCheck() {
 
         {/* Floating Leaf - Right */}
         <motion.div
-          className="absolute right-[5%] top-[38%] text-green-700/20"
+          className="absolute right-[5%] top-[38%] text-brand-teal/25"
           animate={{
             y: [0, 35, 0],
             rotate: [0, -20, 10, 0],
@@ -180,15 +180,15 @@ export default function FarmerAadhaarCheck() {
         </motion.div>
 
         {/* Field */}
-        <div className="absolute -bottom-52 -left-[10%] h-[400px] w-[120%] rounded-[50%] bg-green-700/20" />
+        <div className="absolute -bottom-52 -left-[10%] h-[400px] w-[120%] rounded-[50%] bg-brand-green/20" />
 
-        <div className="absolute -bottom-64 -left-[15%] h-[400px] w-[130%] rounded-[50%] bg-green-900/10" />
+        <div className="absolute -bottom-64 -left-[15%] h-[400px] w-[130%] rounded-[50%] bg-brand-deep/10" />
 
         {/* Floating particles */}
         {[...Array(15)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute h-2 w-2 rounded-full bg-green-500/25"
+            className="absolute h-2 w-2 rounded-full bg-brand-teal/25"
             style={{
               left: `${(i * 17) % 100}%`,
               top: `${(i * 29) % 100}%`,
@@ -221,38 +221,38 @@ export default function FarmerAadhaarCheck() {
         >
           <div className="mb-3 flex items-center justify-center gap-3">
 
-            {/* 3D Logo */}
+            {/* Logo */}
             <motion.div
               whileHover={{
                 rotateY: 180,
                 scale: 1.08,
               }}
               transition={{ duration: 0.7 }}
-              className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500 via-emerald-600 to-green-800 shadow-xl shadow-green-900/25"
+              className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-xl shadow-brand-deep/20"
               style={{
                 transformStyle: "preserve-3d",
               }}
             >
-              <Sprout
-                size={30}
-                className="text-white"
-                strokeWidth={2}
+              <img
+                src="/logo-icon.png"
+                alt="Fasal Setu logo"
+                className="h-11 w-11 object-contain"
               />
             </motion.div>
 
             <div className="text-left">
-              <h1 className="text-2xl font-black tracking-tight text-green-950">
-                Farmer AI
+              <h1 className="text-2xl font-black tracking-tight text-brand-deep">
+                Fasal Setu
               </h1>
 
-              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-green-700">
+              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-brand-teal">
                 Smart Agriculture
               </p>
             </div>
           </div>
 
-          <p className="text-sm text-green-950/60">
-            Empowering farmers through digital technology
+          <p className="text-sm text-brand-deep/60">
+            A Smarter Way To Sell Your Harvest
           </p>
         </motion.div>
 
@@ -293,9 +293,9 @@ export default function FarmerAadhaarCheck() {
           >
 
             {/* Card Glow */}
-            <div className="absolute -right-24 -top-24 h-56 w-56 rounded-full bg-green-400/20 blur-3xl" />
+            <div className="absolute -right-24 -top-24 h-56 w-56 rounded-full bg-brand-teal/20 blur-3xl" />
 
-            <div className="absolute -bottom-24 -left-24 h-56 w-56 rounded-full bg-yellow-400/20 blur-3xl" />
+            <div className="absolute -bottom-24 -left-24 h-56 w-56 rounded-full bg-amber-300/20 blur-3xl" />
 
             {/* =================================================
                 SHIELD
@@ -315,7 +315,7 @@ export default function FarmerAadhaarCheck() {
                 type: "spring",
                 stiffness: 180,
               }}
-              className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-[25px] bg-gradient-to-br from-green-600 via-emerald-600 to-green-900 shadow-2xl shadow-green-700/30"
+              className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-[25px] bg-gradient-to-br from-brand-deep via-brand-teal to-brand-green shadow-2xl shadow-brand-teal/30"
             >
 
               <ShieldCheck
@@ -326,7 +326,7 @@ export default function FarmerAadhaarCheck() {
 
               {/* Pulse ring */}
               <motion.div
-                className="absolute inset-0 rounded-[25px] border-2 border-green-400/50"
+                className="absolute inset-0 rounded-[25px] border-2 border-brand-teal/50"
                 animate={{
                   scale: [1, 1.25, 1],
                   opacity: [0.8, 0, 0.8],
@@ -344,18 +344,18 @@ export default function FarmerAadhaarCheck() {
 
             <div className="mb-7 text-center">
 
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1.5 text-xs font-bold text-green-800">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-brand-mint px-3 py-1.5 text-xs font-bold text-brand-green">
                 <CheckCircle2 size={13} />
                 Farmer Verification
               </div>
 
-              <h2 className="text-3xl font-black tracking-tight text-green-950">
+              <h2 className="text-3xl font-black tracking-tight text-brand-deep">
                 Verify Aadhaar
               </h2>
 
               <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-slate-600">
                 Verify your registered mobile number to
-                securely access your Farmer AI account.
+                securely access your Fasal Setu account.
               </p>
             </div>
 
@@ -373,11 +373,11 @@ export default function FarmerAadhaarCheck() {
 
                 <label
                   htmlFor="phone"
-                  className="mb-2 flex items-center gap-2 text-sm font-bold text-green-950"
+                  className="mb-2 flex items-center gap-2 text-sm font-bold text-brand-deep"
                 >
                   <Phone
                     size={15}
-                    className="text-green-600"
+                    className="text-brand-teal"
                   />
 
                   Registered mobile number
@@ -397,12 +397,12 @@ export default function FarmerAadhaarCheck() {
                       )
                     }
                     placeholder="9876543210"
-                    className="w-full rounded-2xl border border-green-200 bg-green-50/70 px-5 py-4 text-lg font-semibold tracking-wider text-green-950 outline-none transition-all placeholder:text-green-900/30 focus:border-green-500 focus:bg-white focus:ring-4 focus:ring-green-500/10"
+                    className="w-full rounded-2xl border border-brand-teal/30 bg-brand-mint/40 px-5 py-4 text-lg font-semibold tracking-wider text-brand-deep outline-none transition-all placeholder:text-brand-deep/30 focus:border-brand-teal focus:bg-white focus:ring-4 focus:ring-brand-teal/10"
                   />
 
                   {/* Animated underline */}
                   <motion.div
-                    className="absolute bottom-0 left-4 right-4 h-1 rounded-full bg-gradient-to-r from-green-500 to-emerald-400"
+                    className="absolute bottom-0 left-4 right-4 h-1 rounded-full bg-gradient-to-r from-brand-teal to-brand-green"
                     initial={{
                       scaleX: 0,
                     }}
@@ -418,7 +418,7 @@ export default function FarmerAadhaarCheck() {
 
                 <p className="mt-2 text-xs text-slate-500">
                   Your number is used only to check your
-                  Farmer AI registration status.
+                  Fasal Setu registration status.
                 </p>
 
               </div>
@@ -463,7 +463,7 @@ export default function FarmerAadhaarCheck() {
                 whileTap={{
                   scale: 0.97,
                 }}
-                className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl bg-gradient-to-r from-green-700 via-emerald-600 to-green-700 py-4 font-bold text-white shadow-xl shadow-green-700/25"
+                className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl bg-gradient-to-r from-brand-deep via-brand-teal to-brand-green py-4 font-bold text-white shadow-xl shadow-brand-teal/25"
               >
 
                 {/* Button Shine */}
@@ -583,7 +583,7 @@ export default function FarmerAadhaarCheck() {
                 LOGIN
             ================================================== */}
 
-            <div className="mt-7 border-t border-green-900/10 pt-5 text-center">
+            <div className="mt-7 border-t border-brand-deep/10 pt-5 text-center">
 
               <p className="text-xs text-slate-500">
                 Already verified?
@@ -591,7 +591,7 @@ export default function FarmerAadhaarCheck() {
 
               <NavLink
                 to="/farmer-login"
-                className="mt-1 inline-flex items-center gap-1 text-sm font-bold text-green-700 transition hover:text-green-950"
+                className="mt-1 inline-flex items-center gap-1 text-sm font-bold text-brand-teal transition hover:text-brand-deep"
               >
                 Go to Farmer Login
                 <ArrowRight size={14} />
@@ -623,17 +623,17 @@ export default function FarmerAadhaarCheck() {
           className="mt-7 flex flex-wrap items-center justify-center gap-2"
         >
 
-          <div className="flex items-center gap-2 rounded-full border border-green-200 bg-white/60 px-4 py-2 text-xs font-bold text-green-800 shadow-sm backdrop-blur">
+          <div className="flex items-center gap-2 rounded-full border border-brand-teal/20 bg-white/60 px-4 py-2 text-xs font-bold text-brand-green shadow-sm backdrop-blur">
             <Sprout size={14} />
             Farmer First
           </div>
 
-          <div className="flex items-center gap-2 rounded-full border border-green-200 bg-white/60 px-4 py-2 text-xs font-bold text-green-800 shadow-sm backdrop-blur">
+          <div className="flex items-center gap-2 rounded-full border border-brand-teal/20 bg-white/60 px-4 py-2 text-xs font-bold text-brand-green shadow-sm backdrop-blur">
             <ShieldCheck size={14} />
             Secure
           </div>
 
-          <div className="flex items-center gap-2 rounded-full border border-green-200 bg-white/60 px-4 py-2 text-xs font-bold text-green-800 shadow-sm backdrop-blur">
+          <div className="flex items-center gap-2 rounded-full border border-brand-teal/20 bg-white/60 px-4 py-2 text-xs font-bold text-brand-green shadow-sm backdrop-blur">
             <Tractor size={14} />
             Smart Farming
           </div>
@@ -651,9 +651,9 @@ export default function FarmerAadhaarCheck() {
           transition={{
             delay: 1,
           }}
-          className="mt-5 text-center text-[10px] font-bold tracking-[0.2em] text-green-950/35"
+          className="mt-5 text-center text-[10px] font-bold tracking-[0.2em] text-brand-deep/35"
         >
-          FARMER AI • DIGITAL AGRICULTURE • NEXUS PRIME
+          FASAL SETU • A SMARTER WAY TO SELL YOUR HARVEST
         </motion.p>
 
       </div>

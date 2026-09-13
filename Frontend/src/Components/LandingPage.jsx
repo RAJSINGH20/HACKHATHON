@@ -1,94 +1,415 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
+import {
+  Phone,
+  ChevronDown,
+  Volume2,
+  Tractor,
+  ShieldCheck,
+  Landmark,
+  ArrowRight,
+  Wheat,
+  Truck,
+  Users,
+  IndianRupee,
+  Sprout,
+  Menu,
+  X,
+  MessageCircle,
+  Send,
+} from "lucide-react";
+
+// ---------------------------------------------------------------------------
+// Chatbot popup — "Setu Sahayak" ("bridge assistant", echoing "Fasal Setu" /
+// harvest bridge). Built with the same lucide icon set and brand-* tokens
+// as the rest of the page rather than a new visual language.
+// ---------------------------------------------------------------------------
+
+const FAQ_RESPONSES = [
+  {
+    keywords: ["register", "registration", "enrol", "sign up"],
+    reply:
+      "Tap 'Farmer Registration' on the homepage banner to register. You'll need your Aadhaar number and basic land details to complete the form.",
+  },
+  {
+    keywords: ["login", "log in", "sign in", "account"],
+    reply:
+      "Use 'Login As' on the homepage — Farmer, Staff, or Admin login are all listed there depending on who you are.",
+  },
+  {
+    keywords: ["centre", "center", "procurement", "sell", "harvest"],
+    reply:
+      "Fasal Setu connects you directly with procurement centres so you can sell your paddy. Once registered, your dashboard will show nearby centres and current procurement details.",
+  },
+  {
+    keywords: ["price", "rate", "value", "payment"],
+    reply:
+      "Procurement values and quantities are shown in the 'Procurement Details' section on the homepage. For payment status on your own sale, check your farmer dashboard after logging in.",
+  },
+  {
+    keywords: ["contact", "helpline", "phone", "number", "call", "support"],
+    reply: "You can call us directly at 09513886363 for farmer support and procurement-related queries.",
+  },
+  {
+    keywords: ["hi", "hello", "hey", "namaskar", "namaste"],
+    reply:
+      "Hello! I'm Setu Sahayak. Ask me about farmer registration, login, procurement centres, or payments.",
+  },
+];
+
+const DEFAULT_REPLY =
+  "I couldn't quite match that to a topic I know — try asking about registration, login, procurement centres, or payments. For anything else, call 09513886363.";
+
+function getBotReply(userText) {
+  const text = userText.toLowerCase();
+  const match = FAQ_RESPONSES.find((entry) =>
+    entry.keywords.some((k) => text.includes(k))
+  );
+  return match ? match.reply : DEFAULT_REPLY;
+}
+
+function ChatBot() {
+  const [open, setOpen] = useState(false);
+  const [input, setInput] = useState("");
+
+  const [messages, setMessages] = useState([
+    {
+      from: "bot",
+      text:
+        "Namaskar! I'm Setu Sahayak, your Fasal Setu AI assistant. Ask me about farmers, bookings, procurement, FCFS slots, payments, or anything about Farmer AI.",
+    },
+  ]);
+
+  const [isTyping, setIsTyping] = useState(false);
+
+  const scrollRef = useRef(null);
+
+  const API_URL = "http://localhost:3000/api/chats/chat";
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop =
+        scrollRef.current.scrollHeight;
+    }
+  }, [messages, isTyping, open]);
+
+
+  const sendMessage = async (text) => {
+    const trimmed = text.trim();
+
+    if (!trimmed || isTyping) return;
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        from: "user",
+        text: trimmed,
+      },
+    ]);
+
+    setInput("");
+    setIsTyping(true);
+
+    try {
+      console.log("================================");
+      console.log("CHATBOT REQUEST");
+      console.log("URL:", API_URL);
+      console.log("MESSAGE:", trimmed);
+      console.log("================================");
+
+      const response = await axios.post(
+        API_URL,
+        {
+          message: trimmed,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          timeout: 30000,
+        }
+      );
+
+      console.log("BACKEND RESPONSE:", response.data);
+
+      const data = response.data;
+
+      // Axios does NOT use response.ok
+      if (!data.success) {
+        throw new Error(
+          data.message || "AI request failed"
+        );
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          from: "bot",
+          text:
+            data.answer ||
+            "No answer received from AI.",
+        },
+      ]);
+    } catch (error) {
+      console.error("CHATBOT ERROR:", error);
+
+      let errorMessage =
+        "Sorry, I'm unable to connect to the Farmer AI server right now.";
+
+      if (error.response) {
+        console.error(
+          "STATUS:",
+          error.response.status
+        );
+
+        console.error(
+          "DATA:",
+          error.response.data
+        );
+
+        errorMessage =
+          error.response.data?.message ||
+          `Backend error: ${error.response.status}`;
+      } else if (error.request) {
+        errorMessage =
+          "Cannot connect to Farmer AI backend. Make sure Node.js is running on port 3000.";
+      } else {
+        errorMessage =
+          error.message ||
+          "Something went wrong.";
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          from: "bot",
+          text: errorMessage,
+        },
+      ]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    sendMessage(input);
+  };
+
+
+  const quickPrompts = [
+    "Show all bookings",
+    "Which farmers booked wheat?",
+    "Explain FCFS",
+    "Payment status",
+  ];
+
+
+  return (
+    <>
+      {/* Launcher */}
+
+      <button
+        onClick={() => setOpen(!open)}
+        aria-label={
+          open
+            ? "Close chat assistant"
+            : "Open chat assistant"
+        }
+        className="brand-gradient fixed bottom-5 right-5 z-[60] flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg transition-all duration-200 hover:-translate-y-1 hover:shadow-xl md:bottom-7 md:right-7"
+      >
+        {open ? (
+          <X size={24} />
+        ) : (
+          <MessageCircle size={24} />
+        )}
+      </button>
+
+
+      {/* Chat */}
+
+      {open && (
+        <div className="fixed bottom-24 right-5 z-[60] flex h-[70vh] max-h-[560px] w-[92vw] max-w-[380px] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl md:bottom-28 md:right-7">
+
+          {/* Header */}
+
+          <div className="brand-gradient flex items-center gap-3 px-5 py-4">
+
+            <div className="grid h-10 w-10 place-items-center rounded-full bg-white/20 text-white">
+              <Sprout size={20} />
+            </div>
+
+            <div className="flex-1">
+              <p className="text-sm font-bold text-white">
+                Setu Sahayak
+              </p>
+
+              <p className="text-[11px] text-white/80">
+                Farmer AI Assistant
+              </p>
+            </div>
+
+            <button
+              onClick={() => setOpen(false)}
+              className="rounded-full p-1 text-white/80 hover:bg-white/10 hover:text-white"
+            >
+              <X size={18} />
+            </button>
+
+          </div>
+
+
+          {/* Messages */}
+
+          <div
+            ref={scrollRef}
+            className="flex-1 space-y-3 overflow-y-auto bg-brand-bg px-4 py-4"
+          >
+
+            {messages.map((m, i) => (
+              <div
+                key={i}
+                className={`flex ${
+                  m.from === "user"
+                    ? "justify-end"
+                    : "justify-start"
+                }`}
+              >
+
+                <div
+                  className={`max-w-[82%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-6 shadow-sm ${
+                    m.from === "user"
+                      ? "rounded-br-sm bg-brand-teal text-white"
+                      : "rounded-bl-sm border border-gray-200 bg-white text-gray-700"
+                  }`}
+                >
+                  {m.text}
+                </div>
+
+              </div>
+            ))}
+
+
+            {/* Typing */}
+
+            {isTyping && (
+              <div className="flex justify-start">
+                <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm border border-gray-200 bg-white px-4 py-3 shadow-sm">
+
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400" />
+
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400" />
+
+                  <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400" />
+
+                </div>
+              </div>
+            )}
+
+          </div>
+
+
+          {/* Quick prompts */}
+
+          <div className="flex flex-wrap gap-2 border-t border-gray-100 bg-white px-4 py-3">
+
+            {quickPrompts.map((prompt) => (
+              <button
+                key={prompt}
+                onClick={() => sendMessage(prompt)}
+                disabled={isTyping}
+                className="rounded-full bg-brand-mint px-3 py-1.5 text-xs font-semibold text-brand-green hover:brightness-95 disabled:opacity-50"
+              >
+                {prompt}
+              </button>
+            ))}
+
+          </div>
+
+
+          {/* Input */}
+
+          <form
+            onSubmit={handleSubmit}
+            className="flex items-center gap-2 border-t border-gray-200 bg-white p-3"
+          >
+
+            <input
+              type="text"
+              value={input}
+              onChange={(e) =>
+                setInput(e.target.value)
+              }
+              placeholder="Ask Setu Sahayak..."
+              disabled={isTyping}
+              className="flex-1 rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none focus:border-brand-teal focus:ring-2 focus:ring-brand-mint disabled:bg-gray-100"
+            />
+
+            <button
+              type="submit"
+              disabled={
+                !input.trim() || isTyping
+              }
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-brand-teal text-white hover:bg-brand-deep disabled:opacity-40"
+            >
+              <Send size={16} />
+            </button>
+
+          </form>
+
+        </div>
+      )}
+    </>
+  );
+}
 
 function LandingPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
-  const [loginOpen, setLoginOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+  const [language, setLanguage] = useState("English");
+  const [fontScale, setFontScale] = useState(100);
+  const [logoError, setLogoError] = useState(false);
+  const [farmer, setFarmer] = useState(null);
 
-  const farmerServices = [
-    {
-      icon: "📍",
-      title: "Locate Your Purchase Centre",
-    },
-    {
-      icon: "👨‍🌾",
-      title: "Farmer Self Registration",
-    },
-    {
-      icon: "📅",
-      title: "Farmer Self Scheduling",
-    },
-    {
-      icon: "❌",
-      title: "Cancel Self Scheduling",
-    },
-    {
-      icon: "📄",
-      title: "Reg. Certificate Download",
-    },
-    {
-      icon: "✏️",
-      title: "Update Farmer Details",
-    },
-    {
-      icon: "👤",
-      title: "Farmer Profile",
-    },
-    {
-      icon: "🔐",
-      title: "Farmer eKYC",
-    },
-  ];
+  // useEffect(() => {
+  //   const storedFarmer = axios.get()
+  //   if (storedFarmer) {
+  //     setFarmer(JSON.parse(storedFarmer));
+  //   }
+  // }, []);
+
+  useEffect(() => {
+    document.documentElement.style.fontSize = `${fontScale}%`;
+  }, [fontScale]);
+
+  const languages = ["English", "हिंदी", "বাংলা"];
 
   const loginOptions = [
     {
-      icon: "👨‍🌾",
+      icon: Tractor,
       title: "Farmer Login",
       description: "Farmer services & profile",
       link: "/farmer-aadhar",
-      bg: "bg-green-100",
+      bg: "bg-brand-mint",
+      color: "text-brand-green",
     },
     {
-      icon: "🔐",
+      icon: ShieldCheck,
+      title: "Staff Login",
+      description: "Government Officials",
+      link: "/government-aadhar",
+      bg: "bg-sky-100",
+      color: "text-brand-teal",
+    },
+    {
+      icon: Landmark,
       title: "Admin Login",
       description: "System administration",
       link: "/admin-aadhar",
-      bg: "bg-blue-100",
-    },
-    {
-      icon: "🏛️",
-      title: "Government Login",
-      description: "Government officials",
-      link: "/government-aadhar",
-      bg: "bg-orange-100",
-    },
-  ];
-
-  const procurementCards = [
-    {
-      icon: "🏢",
-      title: "Centralized Procurement Centre",
-      value: "40",
-    },
-    {
-      icon: "🚚",
-      title: "Mobile Purchase Centre",
-      value: "15",
-    },
-    {
-      icon: "🌾",
-      title: "FPO / FPC Purchase Centre",
-      value: "44",
-    },
-    {
-      icon: "👩‍🌾",
-      title: "SHG Purchase Centre",
-      value: "00",
-    },
-    {
-      icon: "🏘️",
-      title: "Society Purchase Centre",
-      value: "04",
+      bg: "bg-amber-100",
+      color: "text-amber-600",
     },
   ];
 
@@ -96,94 +417,52 @@ function LandingPage() {
     {
       title: "Registered Farmers",
       value: "22,52,712",
-      icon: "👨‍🌾",
+      icon: Users,
     },
     {
       title: "Procured Quantity",
       value: "49,16,744 MT",
-      icon: "🌾",
+      icon: Wheat,
     },
     {
       title: "Value Of Procured Paddy",
       value: "₹1,13,71,43,09,727",
-      icon: "💰",
+      icon: IndianRupee,
     },
     {
       title: "Dispatch To Rice Mill",
       value: "45,03,324 MT",
-      icon: "🚛",
+      icon: Truck,
     },
     {
       title: "Farmers Benefitted",
       value: "14,03,908",
-      icon: "🤝",
+      icon: Sprout,
     },
-  ];
-
-  const quickAccess = [
-    {
-      icon: "📍",
-      title: "Nearest Purchase Centre",
-    },
-    {
-      icon: "👨‍🌾",
-      title: "Farmer Registration",
-    },
-    {
-      icon: "📅",
-      title: "Self Scheduling",
-    },
-    {
-      icon: "📄",
-      title: "Download Certificate",
-    },
-  ];
-
-  const campSchedule = [
-    "Camps scheduled (agency wise including mCPC)",
-    "Camps where farmers scheduled",
-    "Farmers scheduled (agency wise including CPC and mCPC)",
-    "Expected quantity of paddy sale (MT)",
   ];
 
   return (
-    <div className="min-h-screen bg-[#f5f7f9] text-gray-800">
+    <div className="min-h-screen bg-brand-bg text-gray-800">
 
       {/* =====================================================
-          TOP GOVERNMENT BAR
+          TOP CONTACT STRIP
       ===================================================== */}
 
-      <div className="bg-[#063b63] px-4 py-2 text-sm text-white">
+      <div className="brand-gradient px-4 py-2 text-sm text-white">
 
-        <div className="mx-auto flex max-w-[1450px] flex-col justify-between gap-2 md:flex-row">
+        <div className="mx-auto flex max-w-[1300px] flex-col items-center justify-between gap-1 sm:flex-row">
 
-          <div className="flex flex-wrap items-center gap-4">
+          <span className="font-medium tracking-wide">
+            Fasal Setu — A Smarter Way To Sell Your Harvest
+          </span>
 
-            <span>
-              Government of West Bengal
-            </span>
-
-            <span className="hidden text-white/40 md:block">
-              |
-            </span>
-
-            <span>
-              Department of Food & Supplies
-            </span>
-
-          </div>
-
-          <div className="flex items-center gap-3">
-
-            <span>
-              ☎ 1800 345 5505 / 1967
-            </span>
-
-            <span className="rounded bg-white/10 px-2 py-1 text-xs">
-              TOLL FREE
-            </span>
-
-          </div>
+          <a
+            href="tel:09513886363"
+            className="flex items-center gap-2 font-semibold transition-colors hover:text-brand-mint"
+          >
+            <Phone size={14} />
+            09513886363
+          </a>
 
         </div>
 
@@ -194,30 +473,37 @@ function LandingPage() {
           HEADER
       ===================================================== */}
 
-      <header className="bg-white shadow-sm">
+      <header className="sticky top-0 z-50 bg-white shadow-sm">
 
-        <div className="mx-auto flex max-w-[1450px] items-center justify-between px-5 py-5">
+        <div className="mx-auto flex max-w-[1300px] items-center justify-between px-5 py-3">
 
           {/* LOGO + TITLE */}
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
 
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-2 border-[#0875a5] bg-[#f5fbfd] text-4xl shadow-sm">
-              🏛️  
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center">
+              {logoError ? (
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-mint text-brand-green">
+                  <Sprout size={28} />
+                </div>
+              ) : (
+                <img
+                  src="/logo-icon.png"
+                  alt="Fasal Setu logo"
+                  className="h-14 w-14 object-contain"
+                  onError={() => setLogoError(true)}
+                />
+              )}
             </div>
 
             <div>
 
-              <h1 className="text-xl font-bold text-[#006da9] md:text-3xl">
-                Government of West Bengal
+              <h1 className="text-2xl font-extrabold leading-tight text-brand-deep md:text-3xl">
+                Fasal Setu
               </h1>
 
-              <h2 className="mt-1 text-sm font-semibold text-[#168347] md:text-lg">
-                Department of Food & Supplies
-              </h2>
-
-              <p className="mt-1 text-xs font-medium text-gray-500 md:text-base">
-                Online Paddy Procurement System
+              <p className="text-xs font-semibold text-brand-teal md:text-sm">
+                A Smarter Way To Sell Your Harvest
               </p>
 
             </div>
@@ -229,126 +515,69 @@ function LandingPage() {
 
           <div className="hidden items-center gap-2 md:flex">
 
-            <button className="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-semibold hover:bg-gray-50">
+            <button
+              onClick={() => setFontScale((s) => Math.max(80, s - 10))}
+              aria-label="Decrease text size"
+              className="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-semibold hover:bg-gray-50"
+            >
               A-
             </button>
 
-            <button className="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-semibold hover:bg-gray-50">
+            <button
+              onClick={() => setFontScale((s) => Math.min(120, s + 10))}
+              aria-label="Increase text size"
+              className="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-semibold hover:bg-gray-50"
+            >
               A+
             </button>
 
-            <button className="rounded border border-gray-300 bg-white px-3 py-2 text-sm hover:bg-gray-50">
-              🔊
+            <button
+              aria-label="Screen reader support"
+              className="rounded border border-gray-300 bg-white px-3 py-2 text-sm hover:bg-gray-50"
+            >
+              <Volume2 size={16} />
             </button>
 
-            <button className="rounded bg-[#006da9] px-4 py-2 text-sm font-semibold text-white hover:bg-[#005986]">
-              বাংলা
-            </button>
 
-
-            {/* =================================================
-                LOGIN DROPDOWN
-            ================================================= */}
+            {/* LANGUAGE DROPDOWN */}
 
             <div className="relative">
 
               <button
-                onClick={() => setLoginOpen(!loginOpen)}
-                className="flex items-center gap-2 rounded bg-[#0072bc] px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-[#005f9d]"
+                onClick={() => setLangOpen(!langOpen)}
+                className="flex items-center gap-2 rounded bg-brand-teal px-4 py-2 text-sm font-semibold text-white hover:bg-brand-deep"
               >
-
-                <span>
-                  Login
-                </span>
-
-                <span
-                  className={`text-[10px] transition-transform duration-200 ${
-                    loginOpen ? "rotate-180" : ""
+                <span>{language}</span>
+                <ChevronDown
+                  size={14}
+                  className={`transition-transform duration-200 ${
+                    langOpen ? "rotate-180" : ""
                   }`}
-                >
-                  ▼
-                </span>
-
+                />
               </button>
 
+              {langOpen && (
 
-              {/* DROPDOWN */}
+                <div className="absolute right-0 top-[46px] z-[100] w-40 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl">
 
-              {loginOpen && (
+                  {languages.map((lang) => (
 
-                <div className="absolute right-0 top-[52px] z-[100] w-[290px] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl">
+                    <button
+                      key={lang}
+                      onClick={() => {
+                        setLanguage(lang);
+                        setLangOpen(false);
+                      }}
+                      className={`block w-full px-4 py-2.5 text-left text-sm font-medium transition-colors hover:bg-brand-mint ${
+                        language === lang
+                          ? "bg-brand-mint text-brand-green"
+                          : "text-gray-700"
+                      }`}
+                    >
+                      {lang}
+                    </button>
 
-                  {/* Dropdown Header */}
-
-                  <div className="bg-gradient-to-r from-[#006da9] to-[#0089c7] px-5 py-4">
-
-                    <p className="text-xs font-medium uppercase tracking-wider text-white/80">
-                      Login Portal
-                    </p>
-
-                    <h3 className="mt-1 text-lg font-bold text-white">
-                      Select Login Type
-                    </h3>
-
-                  </div>
-
-
-                  {/* LOGIN OPTIONS */}
-
-                  <div className="p-2">
-
-                    {loginOptions.map((option) => (
-
-                      <Link
-                        to={option.link}
-                        key={option.title}
-                        className="group flex items-center gap-4 rounded-lg px-3 py-3 transition-all duration-200 hover:bg-[#eef8fc]"
-                      >
-
-                        {/* ICON */}
-
-                        <div
-                          className={`grid h-11 w-11 shrink-0 place-items-center rounded-full ${option.bg} text-xl transition-transform duration-200 group-hover:scale-110`}
-                        >
-                          {option.icon}
-                        </div>
-
-
-                        {/* TEXT */}
-
-                        <div className="flex-1">
-
-                          <p className="font-bold text-gray-800 group-hover:text-[#006da9]">
-                            {option.title}
-                          </p>
-
-                          <p className="mt-0.5 text-xs text-gray-500">
-                            {option.description}
-                          </p>
-
-                        </div>
-
-
-                        {/* ARROW */}
-
-                        <span className="text-gray-400 transition-transform duration-200 group-hover:translate-x-1 group-hover:text-[#006da9]">
-                          →
-                        </span>
-
-                      </Link>
-
-                    ))}
-
-                  </div>
-
-
-                  <div className="border-t border-gray-100 bg-gray-50 px-5 py-3 text-center">
-
-                    <p className="text-[11px] text-gray-500">
-                      Secure Government Portal
-                    </p>
-
-                  </div>
+                  ))}
 
                 </div>
 
@@ -363,109 +592,64 @@ function LandingPage() {
 
           <button
             onClick={() => setMobileMenu(!mobileMenu)}
-            className="rounded-lg bg-[#0072bc] px-4 py-2 text-2xl text-white md:hidden"
+            aria-label="Toggle menu"
+            className="rounded-lg bg-brand-teal p-2 text-white md:hidden"
           >
-            {mobileMenu ? "✕" : "☰"}
+            {mobileMenu ? <X size={22} /> : <Menu size={22} />}
           </button>
 
         </div>
 
 
-        {/* =====================================================
-            NAVIGATION
-        ===================================================== */}
+        {/* MOBILE PANEL */}
 
-        <nav className="bg-[#006da9]">
+        {mobileMenu && (
 
-          {/* DESKTOP */}
+          <div className="space-y-3 border-t border-gray-100 px-5 py-4 md:hidden">
 
-          <div className="mx-auto hidden max-w-[1450px] items-center md:flex">
+            <div className="flex items-center gap-2">
 
-            {[
-              "Home",
-              "Old Site",
-              "New Rice Mill",
-              "PPS Enrolment Application",
-              "Order & Circular for KMS 2025-26",
-              "SOP",
-              "FAQ",
-              "Schedule Status",
-            ].map((item, index) => (
-
-              <a
-                key={item}
-                href="#"
-                className="relative px-4 py-4 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#005b8e]"
+              <button
+                onClick={() => setFontScale((s) => Math.max(80, s - 10))}
+                className="flex-1 rounded border border-gray-300 py-2 text-sm font-semibold"
               >
+                A-
+              </button>
 
-                {item}
+              <button
+                onClick={() => setFontScale((s) => Math.min(120, s + 10))}
+                className="flex-1 rounded border border-gray-300 py-2 text-sm font-semibold"
+              >
+                A+
+              </button>
 
-                {(index === 2 || index === 3) && (
-                  <span className="ml-2 text-xs">
-                    ▼
-                  </span>
-                )}
+              <button className="flex-1 rounded border border-gray-300 py-2 text-sm">
+                <Volume2 size={16} className="mx-auto" />
+              </button>
 
-              </a>
+            </div>
 
-            ))}
+            <div>
 
-          </div>
+              <p className="mb-2 text-xs font-semibold uppercase text-gray-400">
+                Select Language
+              </p>
 
+              <div className="flex gap-2">
 
-          {/* MOBILE */}
+                {languages.map((lang) => (
 
-          {mobileMenu && (
-
-            <div className="space-y-1 px-4 py-4 md:hidden">
-
-              {[
-                "Home",
-                "Old Site",
-                "New Rice Mill",
-                "PPS Enrolment Application",
-                "Order & Circular for KMS 2025-26",
-                "SOP",
-                "FAQ",
-                "Schedule Status",
-              ].map((item) => (
-
-                <a
-                  href="#"
-                  key={item}
-                  className="block rounded-lg px-4 py-3 text-sm font-semibold text-white hover:bg-[#005b8e]"
-                >
-                  {item}
-                </a>
-
-              ))}
-
-
-              {/* MOBILE LOGIN */}
-
-              <div className="border-t border-white/20 pt-3">
-
-                <p className="px-4 pb-2 text-xs uppercase text-white/60">
-                  Login Portal
-                </p>
-
-                {loginOptions.map((option) => (
-
-                  <Link
-                    to={option.link}
-                    key={option.title}
-                    className="flex items-center gap-3 rounded-lg px-4 py-3 text-white hover:bg-[#005b8e]"
+                  <button
+                    key={lang}
+                    onClick={() => setLanguage(lang)}
+                    className={`flex-1 rounded-lg py-2 text-sm font-semibold ${
+                      language === lang
+                        ? "bg-brand-teal text-white"
+                        : "bg-gray-100 text-gray-600"
+                    }`}
                   >
-
-                    <span>
-                      {option.icon}
-                    </span>
-
-                    <span>
-                      {option.title}
-                    </span>
-
-                  </Link>
+                    {lang}
+                  </button>
 
                 ))}
 
@@ -473,9 +657,9 @@ function LandingPage() {
 
             </div>
 
-          )}
+          </div>
 
-        </nav>
+        )}
 
       </header>
 
@@ -484,26 +668,26 @@ function LandingPage() {
           MAIN
       ===================================================== */}
 
-      <main className="mx-auto max-w-[1450px] px-4 py-5">
+      <main className="mx-auto max-w-[1300px] px-4 py-6">
 
 
         {/* =====================================================
             NOTICE
         ===================================================== */}
 
-        <div className="mb-5 overflow-hidden rounded-lg border border-yellow-300 bg-yellow-50 shadow-sm">
+        <div className="mb-6 overflow-hidden rounded-lg border border-amber-200 bg-amber-50 shadow-sm">
 
           <div className="flex items-center">
 
-            <div className="shrink-0 bg-[#e6a900] px-5 py-3 text-sm font-bold text-white">
+            <div className="shrink-0 bg-amber-500 px-5 py-3 text-sm font-bold text-white">
               NOTICE
             </div>
 
             <div className="overflow-hidden px-5 py-3">
 
-              <p className="whitespace-nowrap text-sm font-medium text-yellow-900">
-                Online Paddy Procurement System — Please check the latest
-                notifications and updates before proceeding.
+              <p className="whitespace-nowrap text-sm font-medium text-amber-900">
+                Fasal Setu — Please check the latest updates on paddy
+                procurement and farmer registration before proceeding.
               </p>
 
             </div>
@@ -514,121 +698,80 @@ function LandingPage() {
 
 
         {/* =====================================================
-            HERO GRID
+            HERO
         ===================================================== */}
 
-        <section className="grid gap-5 lg:grid-cols-[260px_minmax(0,1fr)_260px]">
+        <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
 
 
           {/* ===================================================
-              FARMER SERVICES
+              FARMER REGISTRATION BANNER
           =================================================== */}
 
-          <aside className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="group relative min-h-[420px] overflow-hidden rounded-2xl shadow-lg">
 
-            <div className="bg-[#08a8d8] px-5 py-4">
+            {/* BRAND BACKDROP (gradient + sunrise-over-fields motif, no external image) */}
 
-              <h2 className="text-sm font-bold tracking-wide text-white">
-                FARMER SERVICES
-              </h2>
+            <div className="absolute inset-0 brand-gradient transition-transform duration-700 group-hover:scale-105">
 
-            </div>
+              {/* SUN GLOW */}
 
+              <div className="absolute -top-12 right-16 h-64 w-64 rounded-full bg-amber-300 opacity-30 blur-3xl" />
+              <div className="absolute right-24 top-6 h-28 w-28 rounded-full bg-gradient-to-br from-amber-200 to-amber-400 opacity-70 blur-md" />
 
-            <div>
+              {/* TERRACED FIELD WAVES */}
 
-              {farmerServices.map((service, index) => (
-
-                <a
-                  href="#"
-                  key={service.title}
-                  className={`group flex items-center gap-3 border-b border-gray-100 px-4 py-4 text-sm font-medium transition-all duration-200 ${
-                    index === 2
-                      ? "bg-[#e7f6fb] text-[#006da9]"
-                      : "text-gray-700 hover:bg-[#f0f9fc] hover:text-[#006da9]"
-                  }`}
-                >
-
-                  <span className="text-lg transition-transform duration-200 group-hover:scale-110">
-                    {service.icon}
-                  </span>
-
-                  <span>
-                    {service.title}
-                  </span>
-
-                </a>
-
-              ))}
+              <svg
+                className="absolute bottom-0 left-0 h-2/5 w-full"
+                viewBox="0 0 800 200"
+                preserveAspectRatio="none"
+              >
+                <path d="M0,120 C150,80 350,150 800,90 L800,200 L0,200 Z" fill="rgba(255,255,255,0.10)" />
+                <path d="M0,150 C200,110 400,170 800,120 L800,200 L0,200 Z" fill="rgba(255,255,255,0.14)" />
+                <path d="M0,180 C250,150 500,190 800,150 L800,200 L0,200 Z" fill="rgba(255,255,255,0.20)" />
+              </svg>
 
             </div>
 
-          </aside>
+            {/* GRADIENT OVERLAY FOR TEXT LEGIBILITY */}
 
+            <div className="absolute inset-0 bg-gradient-to-t from-brand-deep/90 via-brand-deep/30 to-transparent" />
 
-          {/* ===================================================
-              HERO BANNER
-          =================================================== */}
+            {/* FLOATING ICON */}
 
-          <div className="group relative min-h-[450px] overflow-hidden rounded-xl shadow-lg">
-
-            <img
-              src="https://i.pinimg.com/474x/71/c2/2d/71c22dcb20e1d22a8737839675f6f875.jpg"
-              alt="Paddy field"
-              className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-            />
-
-
-            {/* DARK OVERLAY */}
-
-            <div className="absolute inset-0 bg-gradient-to-t from-[#003b5c] via-[#004e6e]/30 to-transparent" />
-
-
-            {/* FLOATING RICE */}
-
-            <div className="absolute right-8 top-8 animate-bounce rounded-full bg-white/90 p-5 text-4xl shadow-xl">
-              🌾
+            <div className="rice-float absolute right-8 top-8 rounded-full bg-white/90 p-4 shadow-xl">
+              <Wheat size={32} className="text-brand-green" />
             </div>
-
 
             {/* HERO CONTENT */}
 
             <div className="absolute bottom-0 left-0 right-0 p-7 text-white md:p-10">
 
-              <span className="inline-block rounded-full bg-[#efa900] px-4 py-1.5 text-xs font-bold uppercase tracking-wide">
-                Online Paddy Procurement
+              <span className="inline-block rounded-full bg-brand-green px-4 py-1.5 text-xs font-bold uppercase tracking-wide">
+                For Farmers
               </span>
 
               <h2 className="mt-4 text-3xl font-bold leading-tight md:text-5xl">
-                Empowering Farmers
+                Sell Your Harvest,
                 <br />
-                Through Digital Procurement
+                The Smarter Way
               </h2>
 
               <p className="mt-4 max-w-xl text-sm leading-7 text-white/90 md:text-base">
-                Register as a farmer, schedule your paddy sale, locate
-                procurement centres and track your procurement activities
-                through one digital platform.
+                Register as a farmer on Fasal Setu and connect directly with
+                procurement centres to sell your paddy with ease and
+                transparency.
               </p>
 
-
-              {/* BUTTONS */}
-
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="mt-6">
 
                 <Link
                   to="/farmer-register"
-                  className="rounded-lg bg-[#0089c5] px-6 py-3 text-sm font-bold text-white shadow-lg transition-all duration-200 hover:-translate-y-1 hover:bg-[#0075aa]"
+                  className="inline-flex items-center gap-2 rounded-lg bg-white px-7 py-3 text-sm font-bold text-brand-deep shadow-lg transition-all duration-200 hover:-translate-y-1 hover:bg-brand-mint"
                 >
                   Farmer Registration
+                  <ArrowRight size={16} />
                 </Link>
-
-                <a
-                  href="#"
-                  className="rounded-lg bg-white px-6 py-3 text-sm font-bold text-[#006da9] shadow-lg transition-all duration-200 hover:-translate-y-1 hover:bg-gray-100"
-                >
-                  Self Scheduling
-                </a>
 
               </div>
 
@@ -641,9 +784,9 @@ function LandingPage() {
               LOGIN AS
           =================================================== */}
 
-          <aside className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+          <aside className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
 
-            <div className="bg-[#08a8d8] px-5 py-4">
+            <div className="brand-gradient px-5 py-4">
 
               <h2 className="text-sm font-bold tracking-wide text-white">
                 LOGIN AS
@@ -651,47 +794,49 @@ function LandingPage() {
 
             </div>
 
+            {loginOptions.map((option) => {
+              const Icon = option.icon;
 
-            {loginOptions.map((option) => (
+              return (
 
-              <Link
-                to={option.link}
-                key={option.title}
-                className="group flex items-center gap-3 border-b border-gray-100 px-4 py-5 transition-all duration-200 hover:bg-[#eef8fc]"
-              >
-
-                <div
-                  className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${option.bg} text-lg transition-transform duration-200 group-hover:scale-110`}
+                <Link
+                  to={option.link}
+                  key={option.title}
+                  className="group flex items-center gap-3 border-b border-gray-100 px-4 py-5 transition-all duration-200 hover:bg-brand-bg"
                 >
-                  {option.icon}
-                </div>
 
-                <div>
+                  <div
+                    className={`grid h-11 w-11 shrink-0 place-items-center rounded-full ${option.bg} ${option.color} transition-transform duration-200 group-hover:scale-110`}
+                  >
+                    <Icon size={20} />
+                  </div>
 
-                  <p className="text-sm font-semibold text-gray-700 group-hover:text-[#006da9]">
-                    {option.title}
-                  </p>
+                  <div className="flex-1">
 
-                  <p className="mt-1 text-xs text-gray-400">
-                    {option.description}
-                  </p>
+                    <p className="text-sm font-semibold text-gray-700 group-hover:text-brand-deep">
+                      {option.title}
+                    </p>
 
-                </div>
+                    <p className="mt-0.5 text-xs text-gray-400">
+                      {option.description}
+                    </p>
 
-              </Link>
+                  </div>
 
-            ))}
+                  <ArrowRight
+                    size={16}
+                    className="text-gray-300 transition-transform duration-200 group-hover:translate-x-1 group-hover:text-brand-teal"
+                  />
 
+                </Link>
 
-            <div className="p-4">
+              );
+            })}
 
-              <Link
-                to="/farmer-login"
-                className="block w-full rounded-lg bg-[#0072bc] py-3 text-center text-sm font-bold text-white hover:bg-[#005d98]"
-              >
-                Login Portal
-              </Link>
-
+            <div className="bg-brand-bg px-5 py-3 text-center">
+              <p className="text-[11px] text-gray-500">
+                Secure Farmer Portal
+              </p>
             </div>
 
           </aside>
@@ -700,362 +845,49 @@ function LandingPage() {
 
 
         {/* =====================================================
-            DISTRICT REPORT
-        ===================================================== */}
-
-        <section className="mt-7 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-
-            <div>
-
-              <h2 className="text-xl font-bold text-[#006da9]">
-                Select District to see the report
-              </h2>
-
-              <p className="mt-1 text-sm text-gray-500">
-                Procurement Centre & Rice Mill Details
-              </p>
-
-            </div>
-
-
-            <select className="rounded-lg border border-gray-300 bg-white px-5 py-3 text-sm outline-none focus:border-[#0072bc]">
-
-              <option>
-                Select District
-              </option>
-
-              <option>
-                Bankura
-              </option>
-
-              <option>
-                Birbhum
-              </option>
-
-              <option>
-                Hooghly
-              </option>
-
-              <option>
-                Murshidabad
-              </option>
-
-              <option>
-                Nadia
-              </option>
-
-              <option>
-                Paschim Bardhaman
-              </option>
-
-              <option>
-                Purba Bardhaman
-              </option>
-
-            </select>
-
-          </div>
-
-        </section>
-
-
-        {/* =====================================================
-            PROCUREMENT CENTRE DETAILS
-        ===================================================== */}
-
-        <section className="mt-8">
-
-          <div className="mb-5">
-
-            <h2 className="text-2xl font-bold text-[#006da9]">
-              Procurement Centre Details
-            </h2>
-
-            <div className="mt-2 h-1 w-16 rounded bg-[#08a8d8]" />
-
-          </div>
-
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-
-            {procurementCards.map((card) => (
-
-              <div
-                key={card.title}
-                className="group rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
-              >
-
-                <div className="flex items-start justify-between">
-
-                  <div className="text-3xl transition-transform duration-300 group-hover:scale-110">
-                    {card.icon}
-                  </div>
-
-                  <span className="rounded-full bg-[#e8f6fb] px-3 py-1 text-lg font-bold text-[#006da9]">
-                    {card.value}
-                  </span>
-
-                </div>
-
-                <h3 className="mt-5 text-sm font-semibold leading-6 text-gray-700">
-                  {card.title}
-                </h3>
-
-              </div>
-
-            ))}
-
-          </div>
-
-        </section>
-
-
-        {/* =====================================================
             PROCUREMENT DETAILS
         ===================================================== */}
 
-        <section className="mt-9">
-
-          <div className="mb-5 flex flex-col justify-between gap-3 md:flex-row md:items-end">
-
-            <div>
-
-              <h2 className="text-2xl font-bold text-[#006da9]">
-                Procurement Details For KMS
-              </h2>
-
-              <div className="mt-2 h-1 w-16 rounded bg-[#08a8d8]" />
-
-            </div>
-
-
-            <div className="flex items-center gap-3">
-
-              <span className="text-sm text-gray-500">
-                Select KMS
-              </span>
-
-              <select className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm outline-none">
-
-                <option>
-                  2025-2026
-                </option>
-
-                <option>
-                  2024-2025
-                </option>
-
-                <option>
-                  2023-2024
-                </option>
-
-              </select>
-
-            </div>
-
-          </div>
-
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-
-            {stats.map((stat) => (
-
-              <div
-                key={stat.title}
-                className="group rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
-              >
-
-                <div className="text-3xl transition-transform duration-300 group-hover:scale-110">
-                  {stat.icon}
-                </div>
-
-                <p className="mt-4 text-xs font-bold uppercase tracking-wide text-gray-400">
-                  {stat.title}
-                </p>
-
-                <p className="mt-2 text-xl font-bold text-[#006da9]">
-                  {stat.value}
-                </p>
-
-              </div>
-
-            ))}
-
-          </div>
-
-
-          <div className="mt-3 text-right text-xs text-gray-400">
-            Last Updated At: 27/02/2025 16:59:04
-          </div>
-
-        </section>
-
-
-        {/* =====================================================
-            CAMP SCHEDULE
-        ===================================================== */}
-
-        <section className="mt-9 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-
-          <div className="border-b border-gray-200 px-6 py-5">
-
-            <h2 className="text-xl font-bold text-[#006da9]">
-              Camp Schedule in next 30 days
-            </h2>
-
-            <p className="mt-1 text-sm text-gray-500">
-              View upcoming procurement camps and farmer schedules.
-            </p>
-
-          </div>
-
-
-          <div className="grid md:grid-cols-2">
-
-            {campSchedule.map((item, index) => (
-
-              <a
-                href="#"
-                key={item}
-                className="group flex items-center justify-between border-b border-gray-100 p-5 transition-all duration-200 hover:bg-[#f1f9fc]"
-              >
-
-                <div className="flex items-center gap-4">
-
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#e8f6fb] font-bold text-[#0072bc]">
-                    {index + 1}
-                  </span>
-
-                  <span className="text-sm font-medium text-gray-700 group-hover:text-[#006da9]">
-                    {item}
-                  </span>
-
-                </div>
-
-                <span className="text-gray-400 transition-transform duration-200 group-hover:translate-x-1 group-hover:text-[#006da9]">
-                  →
-                </span>
-
-              </a>
-
-            ))}
-
-          </div>
-
-        </section>
-
-
-        {/* =====================================================
-            QUICK ACCESS
-        ===================================================== */}
-
-        <section className="mt-9">
+        <section className="mt-10">
 
           <div className="mb-5">
 
-            <h2 className="text-2xl font-bold text-[#006da9]">
-              Quick Access
+            <h2 className="text-2xl font-bold text-brand-deep">
+              Procurement Details
             </h2>
 
-            <div className="mt-2 h-1 w-16 rounded bg-[#08a8d8]" />
+            <div className="mt-2 h-1 w-16 rounded bg-brand-green" />
 
           </div>
 
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {stats.map((stat) => {
+              const Icon = stat.icon;
 
-            {quickAccess.map((item) => (
+              return (
 
-              <a
-                href="#"
-                key={item.title}
-                className="group flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#08a8d8] hover:shadow-lg"
-              >
+                <div
+                  key={stat.title}
+                  className="group rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+                >
 
-                <span className="text-3xl transition-transform duration-300 group-hover:scale-110">
-                  {item.icon}
-                </span>
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-mint text-brand-green transition-transform duration-300 group-hover:scale-110">
+                    <Icon size={20} />
+                  </div>
 
-                <span className="text-sm font-semibold text-gray-700 group-hover:text-[#006da9]">
-                  {item.title}
-                </span>
+                  <p className="mt-4 text-xs font-bold uppercase tracking-wide text-gray-400">
+                    {stat.title}
+                  </p>
 
-              </a>
+                  <p className="mt-2 text-xl font-bold text-brand-deep">
+                    {stat.value}
+                  </p>
 
-            ))}
+                </div>
 
-          </div>
-
-        </section>
-
-
-        {/* =====================================================
-            FARMER EKYC
-        ===================================================== */}
-
-        <section className="mt-9 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-
-          <div className="bg-[#006da9] px-6 py-4">
-
-            <h2 className="font-bold text-white">
-              Farmer eKYC
-            </h2>
-
-          </div>
-
-
-          <div className="grid gap-7 p-6 lg:grid-cols-2">
-
-            {/* REGISTRATION */}
-
-            <div>
-
-              <label className="mb-2 block text-sm font-semibold text-gray-700">
-                Enter Registration / Mobile Number
-              </label>
-
-              <div className="flex flex-col gap-2 sm:flex-row">
-
-                <input
-                  type="text"
-                  placeholder="Enter Number"
-                  className="flex-1 rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-[#0072bc] focus:ring-1 focus:ring-[#0072bc]"
-                />
-
-                <button className="rounded-lg bg-[#0072bc] px-5 py-3 text-sm font-bold text-white hover:bg-[#005d98]">
-                  Get Farmer Details
-                </button>
-
-              </div>
-
-            </div>
-
-
-            {/* AADHAAR */}
-
-            <div>
-
-              <label className="mb-2 block text-sm font-semibold text-gray-700">
-                Aadhaar Number
-              </label>
-
-              <div className="flex flex-col gap-2 sm:flex-row">
-
-                <input
-                  type="text"
-                  placeholder="Enter Aadhaar Number"
-                  className="flex-1 rounded-lg border border-gray-300 px-4 py-3 text-sm outline-none focus:border-[#0072bc] focus:ring-1 focus:ring-[#0072bc]"
-                />
-
-                <button className="rounded-lg bg-[#008f54] px-5 py-3 text-sm font-bold text-white hover:bg-[#00783f]">
-                  Get OTP
-                </button>
-
-              </div>
-
-            </div>
+              );
+            })}
 
           </div>
 
@@ -1068,22 +900,33 @@ function LandingPage() {
           FOOTER
       ===================================================== */}
 
-      <footer className="mt-10 bg-[#063b63] text-white">
+      <footer className="mt-12 bg-brand-deep text-white">
 
-        <div className="mx-auto grid max-w-[1450px] gap-10 px-5 py-12 md:grid-cols-3">
+        <div className="mx-auto grid max-w-[1300px] gap-10 px-5 py-12 md:grid-cols-3">
 
           {/* ABOUT */}
 
           <div>
 
-            <h3 className="text-lg font-bold">
-              Department of Food & Supplies
-            </h3>
+            <div className="flex items-center gap-3">
+
+              <img
+                src="/logo-icon.png"
+                alt="Fasal Setu logo"
+                className="h-10 w-10 object-contain"
+                onError={(e) => (e.target.style.display = "none")}
+              />
+
+              <h3 className="text-lg font-bold">
+                Fasal Setu
+              </h3>
+
+            </div>
 
             <p className="mt-4 text-sm leading-7 text-white/70">
-              Government of West Bengal
+              A Smarter Way To Sell Your Harvest
               <br />
-              Online Paddy Procurement System
+              Connecting farmers directly to procurement centres.
             </p>
 
           </div>
@@ -1099,21 +942,21 @@ function LandingPage() {
 
             <div className="mt-4 space-y-3 text-sm text-white/70">
 
-              <a href="#" className="block hover:text-white">
+              <Link to="/farmer-register" className="block hover:text-white">
                 Farmer Registration
-              </a>
+              </Link>
 
-              <a href="#" className="block hover:text-white">
-                Self Scheduling
-              </a>
+              <Link to="/farmer-aadhar" className="block hover:text-white">
+                Farmer Login
+              </Link>
 
-              <a href="#" className="block hover:text-white">
-                Farmer Profile
-              </a>
+              <Link to="/admin-aadhar" className="block hover:text-white">
+                Admin Login
+              </Link>
 
-              <a href="#" className="block hover:text-white">
-                Purchase Centre
-              </a>
+              <Link to="/government-aadhar" className="block hover:text-white">
+                Government Login
+              </Link>
 
             </div>
 
@@ -1128,18 +971,18 @@ function LandingPage() {
               Contact
             </h3>
 
-            <p className="mt-4 text-sm leading-7 text-white/70">
-              Khadyashree Bhawan
-              <br />
-              11A, Mirza Ghalib Street
-              <br />
-              Kolkata - 700087
-              <br />
-              West Bengal
-            </p>
+            <a
+              href="tel:09513886363"
+              className="mt-4 flex items-center gap-2 text-lg font-semibold text-white hover:text-brand-mint"
+            >
+              <Phone size={18} />
+              09513886363
+            </a>
 
-            <p className="mt-3 font-semibold">
-              ☎ 1800 345 5505 / 1967
+            <p className="mt-3 text-sm leading-7 text-white/70">
+              Available for farmer support and procurement
+              <br />
+              related queries.
             </p>
 
           </div>
@@ -1151,15 +994,14 @@ function LandingPage() {
 
         <div className="border-t border-white/10">
 
-          <div className="mx-auto flex max-w-[1450px] flex-col justify-between gap-3 px-5 py-5 text-xs text-white/50 md:flex-row">
+          <div className="mx-auto flex max-w-[1300px] flex-col justify-between gap-3 px-5 py-5 text-xs text-white/50 md:flex-row">
 
             <p>
-              © 2026 Food & Supplies Department, Government of West Bengal.
-              All Rights Reserved.
+              © 2026 Fasal Setu. All Rights Reserved.
             </p>
 
             <p>
-              Designed & Developed by National Informatics Centre
+              Empowering Farmers Through Technology
             </p>
 
           </div>
@@ -1167,6 +1009,8 @@ function LandingPage() {
         </div>
 
       </footer>
+
+      <ChatBot />
 
     </div>
   );
