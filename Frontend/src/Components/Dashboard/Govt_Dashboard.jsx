@@ -232,35 +232,31 @@ const ControllerPage = ({ onBack }) => {
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState("");
   const [verifiedFarmers, setVerifiedFarmers] = useState({});
+  const [verifiedQrData, setVerifiedQrData] = useState({});
   const scannerBusy = useRef(false);
 
   const verifyFarmerQr = async (rawValue) => {
     try {
-      let qrUrl;
+      const payload = JSON.parse(rawValue);
 
-      try {
-        qrUrl = new URL(rawValue);
-      } catch {
-        throw new Error("This is not a valid Fasal Setu farmer QR page.");
-      }
-
-      const farmerId = qrUrl.searchParams.get("farmerId");
-      const bookingId = qrUrl.pathname.split("/").filter(Boolean).pop();
-
-      if (!farmerId || !bookingId || !qrUrl.pathname.startsWith("/farmer-qr/")) {
-        throw new Error("This is not a valid Fasal Setu farmer QR page.");
+      if (
+        payload.type !== "fasal-setu-farmer-booking" ||
+        !payload.farmerId ||
+        !payload.bookingId
+      ) {
+        throw new Error("This is not a valid Fasal Setu farmer QR code.");
       }
 
       setQrLoading(true);
       setQrError("");
 
       const { data } = await axios.get(
-        `${API_URL}/api/auth/farmer/verify/${farmerId}`
+        `${API_URL}/api/auth/farmer/verify/${payload.farmerId}`
       );
 
       const { farmer } = data;
       const matchesBooking =
-        String(qrTarget?.bookingId || "") === String(bookingId) &&
+        String(qrTarget?.bookingId || "") === String(payload.bookingId) &&
         (String(qrTarget?.farmerId || "") === String(farmer._id) ||
           qrTarget?.farmerPhone === farmer.mobile);
 
@@ -271,6 +267,13 @@ const ControllerPage = ({ onBack }) => {
       setVerifiedFarmers((current) => ({
         ...current,
         [qrTarget.bookingId]: farmer,
+      }));
+      setVerifiedQrData((current) => ({
+        ...current,
+        [qrTarget.bookingId]: {
+          ...payload,
+          farmer,
+        },
       }));
       setQrTarget(null);
       setQrInput("");
@@ -1009,7 +1012,7 @@ const ControllerPage = ({ onBack }) => {
                   value={qrInput}
                   onChange={(event) => setQrInput(event.target.value)}
                   rows={4}
-                  placeholder="Paste the verification page URL from the farmer QR"
+                  placeholder='{"type":"fasal-setu-farmer-booking","bookingId":"...","farmerId":"..."}'
                   className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs outline-none focus:border-blue-700"
                 />
                 <button
@@ -1461,6 +1464,9 @@ const ControllerPage = ({ onBack }) => {
                                 <p><span className="text-green-700">State:</span> {verifiedFarmer.state}</p>
                                 <p className="sm:col-span-2 lg:col-span-4"><span className="text-green-700">Farmer ID:</span> {verifiedFarmer._id}</p>
                               </div>
+                              <pre className="mt-4 overflow-x-auto rounded-lg bg-green-950 p-3 text-xs text-green-100">
+                                {JSON.stringify(verifiedQrData[booking.bookingId], null, 2)}
+                              </pre>
                             </div>
 
                             <div className="grid md:grid-cols-4 gap-4">

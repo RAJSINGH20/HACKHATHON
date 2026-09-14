@@ -379,7 +379,15 @@ const DetailRow = ({ label, value }) =>
 
 const PendingBookingQr = ({ booking, farmer }) => {
   const qrValue = farmer?.id && booking?.id
-    ? `${window.location.origin}/farmer-qr/${booking.id}?farmerId=${encodeURIComponent(farmer.id)}`
+    ? JSON.stringify({
+        type: "fasal-setu-farmer-booking",
+        bookingId: booking.id,
+        farmerId: farmer.id,
+        farmerName: booking.name,
+        farmerPhone: booking.phone,
+        product: booking.product,
+        quantity: booking.offeredQuantity,
+      })
     : "";
 
   return (
@@ -401,16 +409,6 @@ const PendingBookingQr = ({ booking, farmer }) => {
         <p className="mt-1 text-xs leading-relaxed text-stone-600">
           This code is unique to this pending {booking.product} booking.
         </p>
-        {qrValue && (
-          <a
-            href={qrValue}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-3 inline-flex rounded-lg bg-green-800 px-3 py-2 text-xs font-semibold text-white hover:bg-green-900"
-          >
-            Open verification page
-          </a>
-        )}
         <p className="mt-2 text-xs text-stone-500">Show it only to the authorised procurement centre operator.</p>
       </div>
     </div>
