@@ -1009,7 +1009,7 @@ const ControllerPage = ({ onBack }) => {
                   value={qrInput}
                   onChange={(event) => setQrInput(event.target.value)}
                   rows={4}
-                  placeholder='{"type":"fasal-setu-farmer","farmerId":"..."}'
+                  placeholder="Paste the verification page URL from the farmer QR"
                   className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs outline-none focus:border-blue-700"
                 />
                 <button
