@@ -149,6 +149,40 @@ export const getFarmerProfile = async (req, res) => {
     }
 };
 
+export const verifyFarmerQr = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid farmer QR code",
+            });
+        }
+
+        const farmer = await Farmer.findById(id).select("-password").lean();
+
+        if (!farmer) {
+            return res.status(404).json({
+                success: false,
+                message: "Farmer not found",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            verified: true,
+            farmer,
+        });
+    } catch (error) {
+        console.error("VERIFY FARMER QR ERROR:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Unable to verify farmer QR code",
+        });
+    }
+};
+
 export const updateFarmerProfile = async (req, res) => {
     try {
         const { id } = req.params;

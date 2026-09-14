@@ -106,5 +106,14 @@
     "address": {"house_no": "31B", "street": "Salt Lake", "city": "Kolkata", "district": "North 24 Parganas", "state": "West Bengal", "pincode": "700091"},
     "mobile_number": "9823901845",
     "email": "deepa.chatterjee@example.com"
+  },
+  {
+    "aadhaar_number":"741932159655",
+    "name":"Raj Singh",
+    "date_of_birth":"09-09-2003",
+    "gender":"Male",
+    "address":{"house_no":"RR-66", "street":"ABL Township","city":"Durgapur","district":"burdwan","pincode":"713006","state":"West Bengal"},
+    "mobile_number":"7384302670",
+    "email":"rajsinghdurgapur26@example.com"  
   }
 ]

@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import { Html5QrcodeScanner } from "html5-qrcode";
 import { useNavigate } from "react-router-dom";
 import {
   Landmark,
@@ -27,6 +28,9 @@ import {
   Loader2,
   RefreshCw,
   User,
+  QrCode,
+  ScanLine,
+  LockKeyhole,
 } from "lucide-react";
 
 // ======================================================
@@ -222,6 +226,90 @@ const ControllerPage = ({ onBack }) => {
   const [formData, setFormData] = useState({});
 
   const [submitting, setSubmitting] = useState({});
+
+  const [qrTarget, setQrTarget] = useState(null);
+  const [qrInput, setQrInput] = useState("");
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrError, setQrError] = useState("");
+  const [verifiedFarmers, setVerifiedFarmers] = useState({});
+  const scannerBusy = useRef(false);
+
+  const verifyFarmerQr = async (rawValue) => {
+    try {
+      let qrUrl;
+
+      try {
+        qrUrl = new URL(rawValue);
+      } catch {
+        throw new Error("This is not a valid Fasal Setu farmer QR page.");
+      }
+
+      const farmerId = qrUrl.searchParams.get("farmerId");
+      const bookingId = qrUrl.pathname.split("/").filter(Boolean).pop();
+
+      if (!farmerId || !bookingId || !qrUrl.pathname.startsWith("/farmer-qr/")) {
+        throw new Error("This is not a valid Fasal Setu farmer QR page.");
+      }
+
+      setQrLoading(true);
+      setQrError("");
+
+      const { data } = await axios.get(
+        `${API_URL}/api/auth/farmer/verify/${farmerId}`
+      );
+
+      const { farmer } = data;
+      const matchesBooking =
+        String(qrTarget?.bookingId || "") === String(bookingId) &&
+        (String(qrTarget?.farmerId || "") === String(farmer._id) ||
+          qrTarget?.farmerPhone === farmer.mobile);
+
+      if (!matchesBooking) {
+        throw new Error("This QR code does not match the selected booking.");
+      }
+
+      setVerifiedFarmers((current) => ({
+        ...current,
+        [qrTarget.bookingId]: farmer,
+      }));
+      setQrTarget(null);
+      setQrInput("");
+    } catch (error) {
+      setQrError(
+        error.response?.data?.message ||
+          error.message ||
+          "Unable to verify this QR code."
+      );
+    } finally {
+      setQrLoading(false);
+      scannerBusy.current = false;
+    }
+  };
+
+  useEffect(() => {
+    if (!qrTarget) return undefined;
+
+    const scanner = new Html5QrcodeScanner(
+      "farmer-qr-reader",
+      { fps: 10, qrbox: { width: 220, height: 220 } },
+      false
+    );
+
+    scanner.render(
+      (decodedText) => {
+        if (!scannerBusy.current) {
+          scannerBusy.current = true;
+          verifyFarmerQr(decodedText);
+        }
+      },
+      () => {}
+    );
+
+    return () => {
+      scanner.clear().catch(() => {});
+      scannerBusy.current = false;
+    };
+  }, [qrTarget]);
 
   // ====================================================
   // FETCH ALL PROCUREMENT DATA
@@ -886,6 +974,59 @@ const ControllerPage = ({ onBack }) => {
           </div>
         )}
 
+        {qrTarget && (
+          <div className="mb-10 rounded-2xl border border-blue-200 bg-blue-50 p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 text-blue-950">
+                  <ScanLine size={20} />
+                  <h2 className="font-serif text-xl">Verify farmer before starting work</h2>
+                </div>
+                <p className="mt-1 text-sm text-slate-600">
+                  Scan the QR shown by {qrTarget.farmerName}, or paste its QR value below.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setQrTarget(null);
+                  setQrError("");
+                }}
+                className="text-sm font-semibold text-blue-800 hover:underline"
+              >
+                Cancel
+              </button>
+            </div>
+
+            <div className="mt-5 grid gap-5 lg:grid-cols-[280px_1fr]">
+              <div id="farmer-qr-reader" className="rounded-xl bg-white p-2" />
+              <div className="rounded-xl bg-white p-4">
+                <label className="block text-sm font-semibold text-slate-700" htmlFor="farmer-qr-value">
+                  Manual QR value
+                </label>
+                <textarea
+                  id="farmer-qr-value"
+                  value={qrInput}
+                  onChange={(event) => setQrInput(event.target.value)}
+                  rows={4}
+                  placeholder='{"type":"fasal-setu-farmer","farmerId":"..."}'
+                  className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs outline-none focus:border-blue-700"
+                />
+                <button
+                  type="button"
+                  disabled={qrLoading || !qrInput.trim()}
+                  onClick={() => verifyFarmerQr(qrInput)}
+                  className="mt-3 inline-flex items-center gap-2 rounded-md bg-blue-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-900 disabled:opacity-50"
+                >
+                  <QrCode size={16} />
+                  {qrLoading ? "Verifying..." : "Verify QR"}
+                </button>
+                {qrError && <p className="mt-3 text-sm text-red-700">{qrError}</p>}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* PROCUREMENT SLOTS */}
         <div className="bg-white rounded-xl border border-slate-200 p-6 mb-10">
 
@@ -961,7 +1102,35 @@ const ControllerPage = ({ onBack }) => {
             filteredBookings.length > 0 && (
               <div className="space-y-4">
 
-                {filteredBookings.map(
+                {[
+                  {
+                    title: "Pending farmers",
+                    bookings: filteredBookings.filter(
+                      (booking) => booking.decision === "Pending"
+                    ),
+                  },
+                  {
+                    title: "Completed farmers",
+                    bookings: filteredBookings.filter(
+                      (booking) => booking.decision !== "Pending"
+                    ),
+                  },
+                ].map(({ title, bookings: sectionBookings }) => (
+                  <section key={title} className="space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                      <h4 className="font-serif text-lg text-blue-950">
+                        {title}
+                      </h4>
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                        {sectionBookings.length} farmer{sectionBookings.length === 1 ? "" : "s"}
+                      </span>
+                    </div>
+
+                    {sectionBookings.length === 0 ? (
+                      <p className="rounded-xl bg-slate-50 px-4 py-5 text-sm text-slate-500">
+                        No {title.toLowerCase()}.
+                      </p>
+                    ) : sectionBookings.map(
                   (booking) => {
                     const isOpen =
                       openSlot ===
@@ -984,6 +1153,9 @@ const ControllerPage = ({ onBack }) => {
                       submitting[
                         booking.bookingId
                       ];
+
+                    const verifiedFarmer =
+                      verifiedFarmers[booking.bookingId];
 
                     return (
                       <div
@@ -1093,11 +1265,29 @@ const ControllerPage = ({ onBack }) => {
 
                             <div className="flex flex-wrap items-center gap-2">
 
+                              {verifiedFarmer && (
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-800">
+                                  <CheckCircle2 size={12} /> Farmer verified
+                                </span>
+                              )}
+
                               <DecisionPill
                                 decision={
                                   booking.decision
                                 }
                               />
+
+                              <button
+                                onClick={() => {
+                                  setQrTarget(booking);
+                                  setQrError("");
+                                  setQrInput("");
+                                }}
+                                className="inline-flex items-center gap-2 border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-900 hover:bg-blue-50 rounded-md"
+                              >
+                                <QrCode size={15} />
+                                {verifiedFarmer ? "View farmer" : "Scan farmer QR"}
+                              </button>
 
                               <button
                                 onClick={() =>
@@ -1248,8 +1438,30 @@ const ControllerPage = ({ onBack }) => {
 
                         {/* CHECK PANEL */}
 
-                        {isOpen && (
+                        {isOpen && !verifiedFarmer && (
+                          <div className="flex items-center gap-3 border-t border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                            <LockKeyhole size={18} className="shrink-0" />
+                            Scan and verify this farmer's QR code before starting the procurement work.
+                          </div>
+                        )}
+
+                        {isOpen && verifiedFarmer && (
                           <div className="border-t border-slate-200 bg-slate-50 p-4 md:p-5">
+
+                            <div className="mb-5 rounded-xl border border-green-200 bg-green-50 p-4">
+                              <div className="flex items-center gap-2 text-sm font-semibold text-green-900">
+                                <CheckCircle2 size={17} /> Verified farmer details
+                              </div>
+                              <div className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                                <p><span className="text-green-700">Name:</span> {verifiedFarmer.name}</p>
+                                <p><span className="text-green-700">Mobile:</span> {verifiedFarmer.mobile}</p>
+                                <p><span className="text-green-700">Aadhaar:</span> {verifiedFarmer.aadhaar}</p>
+                                <p><span className="text-green-700">Village:</span> {verifiedFarmer.village}</p>
+                                <p><span className="text-green-700">District:</span> {verifiedFarmer.district}</p>
+                                <p><span className="text-green-700">State:</span> {verifiedFarmer.state}</p>
+                                <p className="sm:col-span-2 lg:col-span-4"><span className="text-green-700">Farmer ID:</span> {verifiedFarmer._id}</p>
+                              </div>
+                            </div>
 
                             <div className="grid md:grid-cols-4 gap-4">
 
@@ -1512,6 +1724,8 @@ const ControllerPage = ({ onBack }) => {
                     );
                   }
                 )}
+                  </section>
+                ))}
               </div>
             )}
         </div>

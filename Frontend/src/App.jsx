@@ -27,6 +27,7 @@ import ProtectedRoute from "./Components/ProtectedRoute.jsx";
 import AdminProfile from "./Components/Profile/AdminProfile.jsx";
 import Farmer_profile from "./Components/Profile/Farmer_profile.jsx";
 import Govt_profile from "./Components/Profile/Govt_profile.jsx";
+import FarmerQrPage from "./Components/FarmerQrPage.jsx";
 
 function App() {
   return (
@@ -117,6 +118,11 @@ function App() {
       <Route
         path="/booking"
         element={<Booking />}
+      />
+
+      <Route
+        path="/farmer-qr/:bookingId"
+        element={<FarmerQrPage />}
       />
 
 

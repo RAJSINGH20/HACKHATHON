@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import {
   Phone, Mail, MapPin, Menu, ArrowLeft,
   ShieldCheck, User, Landmark, Users, ClipboardList,
@@ -51,6 +52,9 @@ const CONTROLLERS = [
   },
 ];
 
+const ADMIN_AADHAAR_PHONE = "7384302670";
+const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/aadhaar/check`;
+
 // ---- Controller pages ------------------------------------------------------
 
 const ControllerHeader = ({ title, subtitle, icon: Icon, onBack }) => (
@@ -85,48 +89,126 @@ const StatCard = ({ label, value, icon: Icon }) => (
   </div>
 );
 
-const AdminControlPage = ({ onBack }) => (
-  <div className="min-h-screen bg-stone-50">
-    <ControllerHeader
-      title="Admin Control"
-      subtitle="Manage farmers, slots, and field officers"
-      icon={ShieldCheck}
-      onBack={onBack}
-    />
-    <div className="max-w-6xl mx-auto px-6 py-10">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-        <StatCard label="Registered farmers" value="1,284" icon={Users} />
-        <StatCard label="Pending slot requests" value="37" icon={ClipboardList} />
-        <StatCard label="Active field officers" value="12" icon={ShieldCheck} />
-        <StatCard label="Camps this month" value="9" icon={BarChart3} />
-      </div>
-      <div className="bg-white rounded-xl border border-stone-200 p-6">
-        <h3 className="font-serif text-lg text-green-900 mb-4">Recent slot requests</h3>
-        <div className="divide-y divide-stone-100">
-          {[
-            { name: "Ramesh Kumar", service: "Soil testing", status: "Pending" },
-            { name: "Sunita Devi", service: "Equipment rental", status: "Approved" },
-            { name: "Anil Yadav", service: "Mandi delivery slot", status: "Pending" },
-          ].map((row, i) => (
-            <div key={i} className="flex items-center justify-between py-3 text-sm">
-              <span className="text-stone-700">{row.name}</span>
-              <span className="text-stone-500">{row.service}</span>
-              <span
-                className={
-                  row.status === "Pending"
-                    ? "text-amber-600 font-semibold"
-                    : "text-green-700 font-semibold"
-                }
-              >
-                {row.status}
-              </span>
-            </div>
-          ))}
+const AdminControlPage = ({ onBack }) => {
+  const [aadhaarRecord, setAadhaarRecord] = useState(null);
+  const [aadhaarLoading, setAadhaarLoading] = useState(true);
+  const [aadhaarError, setAadhaarError] = useState("");
+
+  useEffect(() => {
+    const loadAadhaarRecord = async () => {
+      try {
+        const { data } = await axios.get(API_URL, {
+          params: { phone: ADMIN_AADHAAR_PHONE },
+        });
+
+        if (!data.success || !data.registered) {
+          setAadhaarError(data.message || "No Aadhaar record found.");
+          return;
+        }
+
+        setAadhaarRecord(data.data);
+      } catch (error) {
+        setAadhaarError(
+          error.response?.data?.message || "Could not load Aadhaar details."
+        );
+      } finally {
+        setAadhaarLoading(false);
+      }
+    };
+
+    loadAadhaarRecord();
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-stone-50">
+      <ControllerHeader
+        title="Admin Control"
+        subtitle="Manage farmers, slots, and field officers"
+        icon={ShieldCheck}
+        onBack={onBack}
+      />
+      <div className="max-w-6xl mx-auto px-6 py-10">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+          <StatCard label="Registered farmers" value="1,284" icon={Users} />
+          <StatCard label="Pending slot requests" value="37" icon={ClipboardList} />
+          <StatCard label="Active field officers" value="12" icon={ShieldCheck} />
+          <StatCard label="Camps this month" value="9" icon={BarChart3} />
         </div>
+
+        <div className="aadhaar-card relative overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-lg mb-6">
+          <div className="flex h-1.5">
+            <span className="flex-1 bg-orange-500" />
+            <span className="flex-1 bg-white" />
+            <span className="flex-1 bg-green-700" />
+          </div>
+          <div className="border-b border-stone-200 px-6 py-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-orange-500 text-green-800">
+                  <ShieldCheck size={23} />
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-stone-500">Government of India</p>
+                  <h3 className="font-serif text-xl text-green-900">Aadhaar identity card</h3>
+                </div>
+              </div>
+              <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-800">Verified</span>
+            </div>
+          </div>
+
+          <div className="relative px-6 py-5">
+            <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full border-[18px] border-orange-100/70" />
+            <p className="relative mb-4 text-sm text-stone-500">Admin record • Phone lookup: {ADMIN_AADHAAR_PHONE}</p>
+
+          {aadhaarLoading && <p className="text-sm text-stone-500">Loading Aadhaar details...</p>}
+          {aadhaarError && !aadhaarLoading && (
+            <p className="text-sm text-red-600">{aadhaarError}</p>
+          )}
+          {aadhaarRecord && !aadhaarLoading && (
+            <div className="relative grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3 text-sm">
+              <div><span className="text-stone-500">Name</span><p className="font-semibold text-stone-800">{aadhaarRecord.name}</p></div>
+              <div><span className="text-stone-500">Aadhaar number</span><p className="font-semibold tracking-wider text-stone-800">{aadhaarRecord.aadhaar_number}</p></div>
+              <div><span className="text-stone-500">Date of birth</span><p className="font-semibold text-stone-800">{aadhaarRecord.date_of_birth}</p></div>
+              <div><span className="text-stone-500">Gender</span><p className="font-semibold text-stone-800">{aadhaarRecord.gender}</p></div>
+              <div><span className="text-stone-500">Mobile</span><p className="font-semibold text-stone-800">{aadhaarRecord.mobile_number}</p></div>
+              <div><span className="text-stone-500">Email</span><p className="font-semibold text-stone-800">{aadhaarRecord.email}</p></div>
+              <div className="sm:col-span-2 lg:col-span-3">
+                <span className="text-stone-500">Address</span>
+                <p className="font-semibold leading-relaxed text-stone-800">
+                  {aadhaarRecord.address.house_no}, {aadhaarRecord.address.street}, {aadhaarRecord.address.city}, {aadhaarRecord.address.district}, {aadhaarRecord.address.state} - {aadhaarRecord.address.pincode}
+                </p>
+              </div>
+            </div>
+          )}
+          </div>
+          <div className="flex items-center justify-between border-t border-stone-200 px-6 py-3 text-xs text-stone-500">
+            <span>Identity record for admin control</span>
+            <span className="font-semibold tracking-[0.18em] text-green-800">AADHAAR</span>
+          </div>
+        </div>
+
+        {/* <div className="bg-white rounded-xl border border-stone-200 p-6">
+          <h3 className="font-serif text-lg text-green-900 mb-4">Recent slot requests</h3>
+          <div className="divide-y divide-stone-100">
+            {[
+              { name: "Ramesh Kumar", service: "Soil testing", status: "Pending" },
+              { name: "Sunita Devi", service: "Equipment rental", status: "Approved" },
+              { name: "Anil Yadav", service: "Mandi delivery slot", status: "Pending" },
+            ].map((row, i) => (
+              <div key={i} className="flex items-center justify-between py-3 text-sm">
+                <span className="text-stone-700">{row.name}</span>
+                <span className="text-stone-500">{row.service}</span>
+                <span className={row.status === "Pending" ? "text-amber-600 font-semibold" : "text-green-700 font-semibold"}>
+                  {row.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div> */}
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const FarmerControlPage = ({ onBack }) => (
   <div className="min-h-screen bg-stone-50">

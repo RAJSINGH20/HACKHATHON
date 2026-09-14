@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { QRCodeSVG } from "qrcode.react";
+import { useAuth } from "../../context/AuthContext.jsx";
 import {
   Sprout,
   Tractor,
@@ -28,6 +30,7 @@ import {
   Bot,
   Send,
   LoaderCircle,
+  QrCode,
 } from "lucide-react";
 
 // ======================================================
@@ -374,12 +377,43 @@ const DetailRow = ({ label, value }) =>
     </div>
   ) : null;
 
+const PendingBookingQr = ({ booking, farmer }) => {
+  const qrValue = farmer?.id && booking?.id
+    ? `${window.location.origin}/farmer-qr/${booking.id}?farmerId=${encodeURIComponent(farmer.id)}`
+    : "";
+
+  return (
+    <div className="mt-4 flex flex-col items-center gap-4 rounded-xl border border-green-200 bg-green-50/70 p-4 sm:flex-row sm:items-start">
+      <div className="rounded-lg border border-stone-200 bg-white p-2 shadow-sm">
+        {qrValue ? (
+          <QRCodeSVG value={qrValue} size={128} includeMargin />
+        ) : (
+          <div className="flex h-32 w-32 items-center justify-center bg-stone-100 text-center text-xs text-stone-500">
+            QR unavailable
+          </div>
+        )}
+      </div>
+      <div className="text-center sm:text-left">
+        <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-bold text-green-800">
+          <QrCode size={14} /> Pending booking QR
+        </div>
+        <h5 className="font-serif text-base text-green-950">Scan to start this booking</h5>
+        <p className="mt-1 text-xs leading-relaxed text-stone-600">
+          This code is unique to this pending {booking.product} booking.
+        </p>
+        <p className="mt-2 text-xs text-stone-500">Show it only to the authorised procurement centre operator.</p>
+      </div>
+    </div>
+  );
+};
+
 // ======================================================
 // MAIN COMPONENT
 // ======================================================
 
 const Farmer_Dashboard = () => {
   const navigate = useNavigate();
+  const { users } = useAuth();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeService, setActiveService] = useState(null);
@@ -969,14 +1003,12 @@ const Farmer_Dashboard = () => {
                       <div className="space-y-4">
 
                 {sectionBookings.map((booking) => (
-                  <button
-                    key={booking.id}
-                    type="button"
-                    onClick={() =>
-                      setSelectedBooking(booking)
-                    }
-                    className="w-full text-left bg-stone-50 rounded-xl p-4 border-l-4 border-green-600 shadow-sm hover:bg-stone-100 transition-colors"
-                  >
+                  <div key={booking.id} className="rounded-xl border-l-4 border-green-600 bg-stone-50 p-4 shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedBooking(booking)}
+                      className="w-full text-left hover:bg-stone-100 transition-colors"
+                    >
 
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
 
@@ -1114,7 +1146,11 @@ const Farmer_Dashboard = () => {
                       </div>
                     )}
 
-                  </button>
+                    </button>
+                    {sectionTitle === "Pending" && (
+                      <PendingBookingQr booking={booking} farmer={users.farmer} />
+                    )}
+                  </div>
                 ))}
 
                       </div>
