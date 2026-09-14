@@ -197,7 +197,7 @@ IMPORTANT RULES:
 
 export const FamerAIChatController = async (req, res) => {
     try {
-        const { message, farmerId } = req.body;
+        const { message, farmerId, history } = req.body;
 
         if (typeof message !== "string" || !message.trim()) {
             return res.status(400).json({
@@ -229,28 +229,75 @@ export const FamerAIChatController = async (req, res) => {
             return sendConfigurationError(res);
         }
 
+        const safeHistory = Array.isArray(history)
+            ? history
+                .filter(
+                    (m) =>
+                        m &&
+                        typeof m.content === "string" &&
+                        m.content.trim() &&
+                        (m.role === "user" || m.role === "assistant")
+                )
+                .slice(-MAX_HISTORY_MESSAGES)
+            : [];
+
+        let bookings = [];
+        try {
+            const bookingResponse = await axios.get(
+                `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`}/api/bookings/getBookings`,
+                { timeout: 5000 }
+            );
+            const data = bookingResponse.data;
+            bookings = Array.isArray(data) ? data : data.bookings || data.data || [];
+        } catch (bookingError) {
+            console.warn("Unable to load booking data for Farmer AI chat:", bookingError.message);
+        }
+
+        const bookingContext = bookings.slice(0, 20).map((booking) => ({
+            id: booking._id,
+            farmer: `${booking.firstName || ""} ${booking.lastName || ""}`.trim(),
+            phone: booking.phone,
+            product: booking.product,
+            weight: booking.weight,
+            status: booking.status,
+            paymentStatus: booking.paymentStatus,
+            slotStart: booking.assignedSlotStart,
+            slotEnd: booking.assignedSlotEnd,
+        }));
+
+        const isAuthenticated = Boolean(farmerId);
+
         const systemPrompt = `
 You are "Setu Sahayak" — the official AI assistant for Farmer AI, a platform
 that helps farmers and government users manage produce bookings, procurement,
 and slot allocation.
- 
+
+## IMPORTANT CONTEXT
+- Always use the conversation history to resolve references like "that", "it",
+  "the previous one", "make it shorter", "give a one line answer",
+  or follow-up phrases. Do not ask the user to repeat information they already gave.
+- If the user asks for a short answer, keep it extremely brief and direct. A
+  request like "one line" means one sentence, not a paragraph.
+- If the previous conversation already explained a concept, summarize it without
+  asking for more context.
+
 ## WHO YOU HELP
 - Farmers: registration, login, product bookings, booking status, payment status.
 - Government / procurement staff: FCFS slot allocation, procurement overview,
   booking summaries.
- 
+
 ## YOUR KNOWLEDGE
 1. General Farmer AI concepts (how registration works, how FCFS slots are
    allocated, how payments are tracked, how the booking flow works, etc.) —
    you can explain these at any time, logged in or not.
 2. LIVE BOOKING DATA (most recent 20 bookings) — only usable for an
    authenticated user. See ACCESS CONTROL below.
- 
+
 LIVE BOOKING DATA (most recent 20):
 ${JSON.stringify(bookingContext)}
- 
+
 Current user authentication status: ${isAuthenticated ? "LOGGED IN" : "NOT LOGGED IN"}
- 
+
 ## ACCESS CONTROL (STRICT)
 - If the user is NOT LOGGED IN and asks about bookings, payment status,
   slot details, or any farmer-specific/personal data: do NOT share any
@@ -261,7 +308,7 @@ Current user authentication status: ${isAuthenticated ? "LOGGED IN" : "NOT LOGGE
   live booking data provided above.
 - General, non-personal questions about how Farmer AI works are always
   fine to answer, regardless of login status.
- 
+
 ## ANSWERING RULES
 1. Never invent farmer, product, quantity, slot, payment, or booking
    information that isn't present in the live data. If it's not there,
@@ -287,18 +334,15 @@ Current user authentication status: ${isAuthenticated ? "LOGGED IN" : "NOT LOGGE
    familiar with technical systems.
 `;
 
+        const messages = [
+            { role: "system", content: systemPrompt },
+            ...safeHistory,
+            { role: "user", content: message },
+        ];
+
         const completion = await client.chat.completions.create({
             model: "openai/gpt-oss-20b",
-            messages: [
-                {
-                    role: "system",
-                    content: systemPrompt,
-                },
-                {
-                    role: "user",
-                    content: message
-                }
-            ],
+            messages,
             max_tokens: 700,
             reasoning_effort: "low",
         });
@@ -307,9 +351,16 @@ Current user authentication status: ${isAuthenticated ? "LOGGED IN" : "NOT LOGGE
             completion.choices?.[0]?.message?.content ||
             "Sorry, I could not generate a response.";
 
+        const updatedHistory = [
+            ...safeHistory,
+            { role: "user", content: message },
+            { role: "assistant", content: answer },
+        ].slice(-MAX_HISTORY_MESSAGES);
+
         return res.status(200).json({
             success: true,
             answer,
+            history: updatedHistory,
         });
     } catch (error) {
         console.error(
