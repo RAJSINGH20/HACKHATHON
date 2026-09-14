@@ -45,13 +45,17 @@ const sendConfigurationError = (res) =>
             "Chat is not configured. Add a valid Groq API key as GROQ_API_KEY in Backend/.env and restart the backend.",
     });
 
+// Max number of previous turns (user+assistant pairs) to keep in context.
+// Increase carefully — more history = more tokens = more cost/latency.
+const MAX_HISTORY_MESSAGES = 10;
+
 export const chatController = async (req, res) => {
     try {
         if (!hasGroqKey()) {
             return sendConfigurationError(res);
         }
 
-        const { message } = req.body;
+        const { message, history } = req.body;
 
         if (typeof message !== "string" || !message.trim()) {
             return res.status(400).json({
@@ -60,7 +64,26 @@ export const chatController = async (req, res) => {
             });
         }
 
-        // Get live booking data
+        // ---- Sanitize incoming history ----
+        // Expected shape from frontend:
+        // history = [
+        //   { role: "user", content: "..." },
+        //   { role: "assistant", content: "..." },
+        //   ...
+        // ]
+        const safeHistory = Array.isArray(history)
+            ? history
+                .filter(
+                    (m) =>
+                        m &&
+                        typeof m.content === "string" &&
+                        m.content.trim() &&
+                        (m.role === "user" || m.role === "assistant")
+                )
+                .slice(-MAX_HISTORY_MESSAGES)
+            : [];
+
+        // ---- Get live booking data ----
         // Booking data enriches answers, but an unavailable database must not
         // make the general-purpose assistant unusable.
         let bookings = [];
@@ -73,7 +96,10 @@ export const chatController = async (req, res) => {
                 ? data
                 : data.bookings || data.data || [];
         } catch (bookingError) {
-            console.warn("Unable to load booking data for chat:", bookingError.message);
+            console.warn(
+                "Unable to load booking data for chat:",
+                bookingError.message
+            );
         }
 
         const bookingContext = bookings.slice(0, 20).map((booking) => ({
@@ -117,36 +143,44 @@ IMPORTANT RULES:
 5. You can explain general Farmer AI concepts even if they are not present in the booking data.
 6. If the user asks for all bookings, summarize the available bookings clearly.
 7. Never expose API keys, passwords or private credentials.
+8. Pay attention to the ongoing conversation history. If the user refers back to
+   something discussed earlier (e.g. "give me a one line answer", "summarize that",
+   "explain more"), use the previous messages in this conversation to figure out
+   what they are referring to, instead of asking them to repeat it.
 `;
 
-        const response =
-            await client.chat.completions.create({
-                model: "openai/gpt-oss-20b",
-                messages: [
-                    {
-                        role: "system",
-                        content: systemPrompt,
-                    },
-                    {
-                        role: "user",
-                        content: message,
-                    },
-                ],
-                temperature: 0.2,
-                max_tokens: 400,
-                reasoning_effort: "low",
-            });
+        // ---- Build full message list: system + history + new user message ----
+        const messages = [
+            { role: "system", content: systemPrompt },
+            ...safeHistory,
+            { role: "user", content: message },
+        ];
+
+        const response = await client.chat.completions.create({
+            model: "openai/gpt-oss-20b",
+            messages,
+            temperature: 0.2,
+            max_tokens: 400,
+            reasoning_effort: "low",
+        });
 
         const answer =
             response.choices?.[0]?.message?.content ||
             "Sorry, I could not generate a response.";
 
+        // Send back the updated history so the frontend can persist it
+        const updatedHistory = [
+            ...safeHistory,
+            { role: "user", content: message },
+            { role: "assistant", content: answer },
+        ].slice(-MAX_HISTORY_MESSAGES);
+
         return res.status(200).json({
             success: true,
             answer,
             totalBookings: bookings.length,
+            history: updatedHistory,
         });
-
     } catch (error) {
         console.error(
             "Chat Controller Error:",
