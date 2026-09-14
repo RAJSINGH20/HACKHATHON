@@ -27,6 +27,8 @@ import {
 // as the rest of the page rather than a new visual language.
 // ---------------------------------------------------------------------------
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
 const FAQ_RESPONSES = [
   {
     keywords: ["register", "registration", "enrol", "sign up"],
@@ -165,10 +167,8 @@ function ChatBot() {
   const scrollRef = useRef(null);
 
   // Keep the chat API on the same configurable backend used by the rest of
-  // the app. The previous hard-coded localhost address only worked locally.
-  const API_URL = `${
-    import.meta.env.VITE_API_URL || "http://localhost:3000"
-  }/api/chats/chat`;
+  // the app instead of hard-coding localhost for each environment.
+  const API_URL = `${API_BASE_URL}/api/chats/chat`;
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -524,7 +524,7 @@ function LandingPage() {
     const loadProcurementBookings = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:3000/api/procurement/bookings"
+          `${API_BASE_URL}/api/procurement/bookings`
         );
         setProcurementBookings(response.data?.bookings || []);
       } catch (error) {
