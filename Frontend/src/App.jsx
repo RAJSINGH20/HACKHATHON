@@ -116,7 +116,11 @@ function App() {
 
       <Route
         path="/booking"
-        element={<Booking />}
+        element={
+          <ProtectedRoute role="farmer">
+            <Booking />
+          </ProtectedRoute>
+        }
       />
 
       {/* ================= ADDHAR ================= */}
