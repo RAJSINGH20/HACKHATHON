@@ -23,6 +23,8 @@ export const createBooking = async (req, res) => {
             farmerId,
         } = req.body;
 
+        console.log(firstName,lastName,phone,product,weight,farmerId)
+
         if (
             !firstName ||
             !lastName ||

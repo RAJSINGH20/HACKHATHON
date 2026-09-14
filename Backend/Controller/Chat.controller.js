@@ -3,33 +3,51 @@ dotenv.config({ path: new URL("../.env", import.meta.url) });
 import axios from "axios";
 import OpenAI from "openai";
 
-console.log(
-    "OpenRouter Key Loaded:",
-    !!process.env.OPENROUTER_API_KEY
-);
+const GROQ_API_KEY =
+    process.env.GROQ_API_KEY || process.env.OPENROUTER_API_KEY;
+
+console.log("Groq Key Loaded:", !!GROQ_API_KEY);
 
 const client = new OpenAI({
-    baseURL: "https://openrouter.ai/api/v1",
-    apiKey: process.env.OPENROUTER_API_KEY,
+    baseURL: "https://api.groq.com/openai/v1",
+    apiKey: GROQ_API_KEY,
 });
 
 const BOOKINGS_API_URL =
     `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`}/api/bookings/getBookings`;
 
-const hasOpenRouterKey = () =>
-    typeof process.env.OPENROUTER_API_KEY === "string" &&
-    process.env.OPENROUTER_API_KEY.startsWith("sk-or-v1-");
+const hasGroqKey = () =>
+    typeof GROQ_API_KEY === "string" &&
+    GROQ_API_KEY.startsWith("gsk_");
+
+const parseBookingDetails = (message) => {
+    const match = message.match(
+        /1\s*\.??\s*([A-Za-z]+)\s+2\s*\.??\s*([A-Za-z]+)\s+3\s*\.??\s*(\d{10})\s+4\s*\.??\s*(Wheat|Paddy|Mustard|Maize|Sugarcane|Cotton)\s+5\s*\.??\s*(\d+(?:\.\d+)?)\s*kg?/i
+    );
+
+    if (!match) {
+        return null;
+    }
+
+    return {
+        firstName: match[1],
+        lastName: match[2],
+        phone: match[3],
+        product: match[4].charAt(0).toUpperCase() + match[4].slice(1).toLowerCase(),
+        weight: Number(match[5]),
+    };
+};
 
 const sendConfigurationError = (res) =>
     res.status(503).json({
         success: false,
         message:
-            "Chat is not configured. Add a valid OpenRouter API key to Backend/.env and restart the backend.",
+            "Chat is not configured. Add a valid Groq API key as GROQ_API_KEY in Backend/.env and restart the backend.",
     });
 
 export const chatController = async (req, res) => {
     try {
-        if (!hasOpenRouterKey()) {
+        if (!hasGroqKey()) {
             return sendConfigurationError(res);
         }
 
@@ -58,6 +76,18 @@ export const chatController = async (req, res) => {
             console.warn("Unable to load booking data for chat:", bookingError.message);
         }
 
+        const bookingContext = bookings.slice(0, 20).map((booking) => ({
+            id: booking._id,
+            farmer: `${booking.firstName || ""} ${booking.lastName || ""}`.trim(),
+            phone: booking.phone,
+            product: booking.product,
+            weight: booking.weight,
+            status: booking.status,
+            paymentStatus: booking.paymentStatus,
+            slotStart: booking.assignedSlotStart,
+            slotEnd: booking.assignedSlotEnd,
+        }));
+
         const systemPrompt = `
 You are "Setu Sahayak", the AI assistant for Farmer AI.
 
@@ -74,9 +104,9 @@ Your job is to help farmers and government users with:
 
 You have access to LIVE booking data below.
 
-LIVE BOOKING DATA:
+LIVE BOOKING DATA (most recent 20):
 
-${JSON.stringify(bookings, null, 2)}
+${JSON.stringify(bookingContext)}
 
 IMPORTANT RULES:
 
@@ -91,7 +121,7 @@ IMPORTANT RULES:
 
         const response =
             await client.chat.completions.create({
-                model: "openai/gpt-4o-mini",
+                model: "openai/gpt-oss-20b",
                 messages: [
                     {
                         role: "system",
@@ -103,7 +133,8 @@ IMPORTANT RULES:
                     },
                 ],
                 temperature: 0.2,
-                max_tokens: 700,
+                max_tokens: 400,
+                reasoning_effort: "low",
             });
 
         const answer =
@@ -132,17 +163,36 @@ IMPORTANT RULES:
 
 export const FamerAIChatController = async (req, res) => {
     try {
-        if (!hasOpenRouterKey()) {
-            return sendConfigurationError(res);
-        }
-
-        const { message } = req.body;
+        const { message, farmerId } = req.body;
 
         if (typeof message !== "string" || !message.trim()) {
             return res.status(400).json({
                 success: false,
                 message: "Message is required",
             });
+        }
+
+        const bookingDetails = parseBookingDetails(message.trim());
+
+        if (bookingDetails) {
+            const bookingResponse = await axios.post(
+                `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`}/api/bookings/createBooking`,
+                {
+                    ...bookingDetails,
+                    farmerId: farmerId || null,
+                },
+                { timeout: 10000 }
+            );
+
+            return res.status(200).json({
+                success: true,
+                answer: `Your booking is confirmed for ${bookingDetails.firstName} ${bookingDetails.lastName}. ${bookingDetails.product}, ${bookingDetails.weight} kg, phone ${bookingDetails.phone}.`,
+                booking: bookingResponse.data.booking,
+            });
+        }
+
+        if (!hasGroqKey()) {
+            return sendConfigurationError(res);
         }
 
         const systemPrompt = `
@@ -213,8 +263,7 @@ RULES
 `;
 
         const completion = await client.chat.completions.create({
-            // This is an OpenRouter client, so use an OpenRouter model id.
-            model: "gpt-6-astra",
+            model: "openai/gpt-oss-20b",
             messages: [
                 {
                     role: "system",
@@ -224,7 +273,9 @@ RULES
                     role: "user",
                     content: message
                 }
-            ]
+            ],
+            max_tokens: 700,
+            reasoning_effort: "low",
         });
 
         const answer =

@@ -11,7 +11,8 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
-const VITE_API_URL = import.meta.env.VITE_API_URL;
+const VITE_API_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:3000";
 const CREATE_BOOKING_URL = `${VITE_API_URL}/api/bookings/createBooking`;
 
 const PRODUCTS = [
@@ -92,13 +93,20 @@ const BookingPage = () => {
     try {
       const { data } = await axios.post(
         CREATE_BOOKING_URL,
-        { ...form, farmerId: users.farmer?.id || null },
+        {
+          ...form,
+          farmerId: users.farmer?.id || users.farmer?._id || null,
+        },
         {
           withCredentials: true
         }
       );
 
       console.log("Booking successful:", data);
+
+      if (!data?.success) {
+        throw new Error(data?.message || "Booking was not saved.");
+      }
 
       setSubmitted(true);
     } catch (err) {
@@ -120,6 +128,7 @@ const BookingPage = () => {
         ...e,
         submit:
           err.response?.data?.message ||
+          err.message ||
           "Something went wrong. Please try again.",
       }));
     } finally {

@@ -405,7 +405,7 @@ const PendingBookingQr = ({ booking, farmer }) => {
         <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-bold text-green-800">
           <QrCode size={14} /> Pending booking QR
         </div>
-        <h5 className="font-serif text-base text-green-950">Scan to start this booking</h5>
+        <h5 className="font-serif text-base text-green-950">Scan to start this Queue</h5>
         <p className="mt-1 text-xs leading-relaxed text-stone-600">
           This code is unique to this pending {booking.product} booking.
         </p>
@@ -527,6 +527,7 @@ const Farmer_Dashboard = () => {
         {
           message: message,
           history: aiHistory,
+          farmerId: users.farmer?.id || users.farmer?._id || null,
         },
         {
           headers: {
