@@ -3,7 +3,9 @@
 // ======================================================
 
 import dotenv from "dotenv";
-dotenv.config();
+// Resolve .env relative to this backend entrypoint. This keeps configuration
+// working whether the server is launched from Backend/ or the repository root.
+dotenv.config({ path: new URL(".env", import.meta.url) });
 
 import express from "express";
 import cors from "cors";

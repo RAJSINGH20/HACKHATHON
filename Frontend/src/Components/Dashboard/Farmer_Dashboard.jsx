@@ -20,6 +20,7 @@ import {
   Package,
   Menu,
   X,
+  User,
   AlertCircle,
   Building2,
   XCircle,
@@ -557,6 +558,19 @@ const Farmer_Dashboard = () => {
     );
   }, [bookings]);
 
+  const pendingBookings = useMemo(
+    () => bookings.filter((booking) => booking.decision === "Pending"),
+    [bookings]
+  );
+
+  const completedBookings = useMemo(
+    () =>
+      bookings.filter(
+        (booking) => booking.decision !== "Pending"
+      ),
+    [bookings]
+  );
+
   // ====================================================
   // PROCUREMENT BOOKING DATA
   // ====================================================
@@ -650,6 +664,10 @@ const Farmer_Dashboard = () => {
     navigate("/booking");
   };
 
+  const handleProfile = () => {
+    navigate("/FarmerProfile");
+  };
+
   // ====================================================
   // UI
   // ====================================================
@@ -695,6 +713,14 @@ const Farmer_Dashboard = () => {
               />
 
               <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-orange-500 rounded-full border-2 border-white" />
+            </button>
+
+            <button
+              onClick={handleProfile}
+              className="flex items-center gap-2 bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-semibold"
+            >
+              <User size={16} />
+              <span>Profile</span>
             </button>
 
             <button
@@ -924,9 +950,25 @@ const Farmer_Dashboard = () => {
           {!loading &&
             !error &&
             bookings.length > 0 && (
-              <div className="space-y-4">
+              <div className="space-y-8">
 
-                {bookings.map((booking) => (
+                {[
+                  ["Pending", pendingBookings],
+                  ["Completed", completedBookings],
+                ].map(([sectionTitle, sectionBookings]) => (
+                  <section key={sectionTitle}>
+                    <h4 className="mb-3 font-serif text-base text-green-900">
+                      {sectionTitle} bookings
+                    </h4>
+
+                    {sectionBookings.length === 0 ? (
+                      <p className="rounded-xl bg-stone-50 px-4 py-5 text-sm text-stone-500">
+                        No {sectionTitle.toLowerCase()} bookings.
+                      </p>
+                    ) : (
+                      <div className="space-y-4">
+
+                {sectionBookings.map((booking) => (
                   <button
                     key={booking.id}
                     type="button"
@@ -1073,6 +1115,11 @@ const Farmer_Dashboard = () => {
                     )}
 
                   </button>
+                ))}
+
+                      </div>
+                    )}
+                  </section>
                 ))}
 
               </div>

@@ -18,6 +18,7 @@ import {
   X,
   MessageCircle,
   Send,
+  VolumeX,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -61,6 +62,84 @@ const FAQ_RESPONSES = [
 const DEFAULT_REPLY =
   "I couldn't quite match that to a topic I know — try asking about registration, login, procurement centres, or payments. For anything else, call 09513886363.";
 
+const HINDI_TRANSLATIONS = {
+  "Fasal Setu — A Smarter Way To Sell Your Harvest": "फसल सेतु — अपनी उपज बेचने का बेहतर तरीका",
+  "A Smarter Way To Sell Your Harvest": "अपनी उपज बेचने का बेहतर तरीका",
+  "Decrease text size": "अक्षर छोटे करें",
+  "Increase text size": "अक्षर बड़े करें",
+  "Screen reader support": "स्क्रीन रीडर सहायता",
+  "Select Language": "भाषा चुनें",
+  NOTICE: "सूचना",
+  "Fasal Setu — Please check the latest updates on paddy procurement and farmer registration before proceeding.": "फसल सेतु — आगे बढ़ने से पहले धान खरीद और किसान पंजीकरण की नवीनतम जानकारी देखें।",
+  "For Farmers": "किसानों के लिए",
+  "Sell Your Harvest,": "अपनी उपज बेचें,",
+  "The Smarter Way": "बेहतर तरीके से",
+  "Register as a farmer on Fasal Setu and connect directly with procurement centres to sell your paddy with ease and transparency.": "फसल सेतु पर किसान के रूप में पंजीकरण करें और आसानी व पारदर्शिता के साथ धान बेचने के लिए खरीद केंद्रों से सीधे जुड़ें।",
+  "Farmer Registration": "किसान पंजीकरण",
+  "Farmer services & profile": "किसान सेवाएं और प्रोफाइल",
+  "Staff Login": "कर्मचारी लॉगिन",
+  "Government Officials": "सरकारी अधिकारी",
+  "System administration": "सिस्टम प्रशासन",
+  "LOGIN AS": "लॉगिन करें",
+  "Secure Farmer Portal": "सुरक्षित किसान पोर्टल",
+  "Procurement Details": "खरीद विवरण",
+  "Procurement Bookings": "खरीद बुकिंग",
+  "Offered Quantity": "प्रस्तावित मात्रा",
+  "Procurement Value": "खरीद मूल्य",
+  "Completed Quantity": "पूरी की गई मात्रा",
+  "Farmers Benefitted": "लाभान्वित किसान",
+  "Loading...": "लोड हो रहा है...",
+  "Unable to load live procurement details.": "लाइव खरीद विवरण लोड नहीं हो सका।",
+  "Important Links": "महत्वपूर्ण लिंक",
+  "Farmer Login": "किसान लॉगिन",
+  "Admin Login": "एडमिन लॉगिन",
+  "Government Login": "सरकारी लॉगिन",
+  Contact: "संपर्क",
+  "Available for farmer support and procurement": "किसान सहायता और खरीद संबंधी",
+  "related queries.": "प्रश्नों के लिए उपलब्ध।",
+  "Connecting farmers directly to procurement centres.": "किसानों को सीधे खरीद केंद्रों से जोड़ना।",
+  "© 2026 Fasal Setu. All Rights Reserved.": "© 2026 फसल सेतु। सर्वाधिकार सुरक्षित।",
+};
+
+const BENGALI_TRANSLATIONS = {
+  "Fasal Setu — A Smarter Way To Sell Your Harvest": "ফসল সেতু — ফসল বিক্রির আরও স্মার্ট উপায়",
+  "A Smarter Way To Sell Your Harvest": "ফসল বিক্রির আরও স্মার্ট উপায়",
+  "Decrease text size": "লেখার আকার ছোট করুন",
+  "Increase text size": "লেখার আকার বড় করুন",
+  "Screen reader support": "স্ক্রিন রিডার সহায়তা",
+  "Select Language": "ভাষা নির্বাচন করুন",
+  NOTICE: "বিজ্ঞপ্তি",
+  "Fasal Setu — Please check the latest updates on paddy procurement and farmer registration before proceeding.": "ফসল সেতু — এগিয়ে যাওয়ার আগে ধান সংগ্রহ এবং কৃষক নিবন্ধনের সর্বশেষ তথ্য দেখুন।",
+  "For Farmers": "কৃষকদের জন্য",
+  "Sell Your Harvest,": "আপনার ফসল বিক্রি করুন,",
+  "The Smarter Way": "আরও স্মার্ট উপায়ে",
+  "Register as a farmer on Fasal Setu and connect directly with procurement centres to sell your paddy with ease and transparency.": "ফসল সেতুতে কৃষক হিসেবে নিবন্ধন করুন এবং সহজে ও স্বচ্ছতার সঙ্গে ধান বিক্রির জন্য সংগ্রহ কেন্দ্রগুলোর সঙ্গে সরাসরি যোগাযোগ করুন।",
+  "Farmer Registration": "কৃষক নিবন্ধন",
+  "Farmer services & profile": "কৃষক পরিষেবা ও প্রোফাইল",
+  "Staff Login": "কর্মী লগইন",
+  "Government Officials": "সরকারি কর্মকর্তা",
+  "System administration": "সিস্টেম প্রশাসন",
+  "LOGIN AS": "লগইন করুন",
+  "Secure Farmer Portal": "নিরাপদ কৃষক পোর্টাল",
+  "Procurement Details": "সংগ্রহের বিবরণ",
+  "Procurement Bookings": "সংগ্রহ বুকিং",
+  "Offered Quantity": "প্রস্তাবিত পরিমাণ",
+  "Procurement Value": "সংগ্রহের মূল্য",
+  "Completed Quantity": "সম্পন্ন পরিমাণ",
+  "Farmers Benefitted": "উপকৃত কৃষক",
+  "Loading...": "লোড হচ্ছে...",
+  "Unable to load live procurement details.": "লাইভ সংগ্রহের বিবরণ লোড করা যায়নি।",
+  "Important Links": "গুরুত্বপূর্ণ লিঙ্ক",
+  "Farmer Login": "কৃষক লগইন",
+  "Admin Login": "অ্যাডমিন লগইন",
+  "Government Login": "সরকারি লগইন",
+  Contact: "যোগাযোগ",
+  "Available for farmer support and procurement": "কৃষক সহায়তা ও সংগ্রহ সংক্রান্ত",
+  "related queries.": "প্রশ্নের জন্য উপলব্ধ।",
+  "Connecting farmers directly to procurement centres.": "কৃষকদের সরাসরি সংগ্রহ কেন্দ্রের সঙ্গে যুক্ত করা।",
+  "© 2026 Fasal Setu. All Rights Reserved.": "© ২০২৬ ফসল সেতু। সর্বস্বত্ব সংরক্ষিত।",
+};
+
 function getBotReply(userText) {
   const text = userText.toLowerCase();
   const match = FAQ_RESPONSES.find((entry) =>
@@ -85,7 +164,11 @@ function ChatBot() {
 
   const scrollRef = useRef(null);
 
-  const API_URL = "http://localhost:3000/api/chats/chat";
+  // Keep the chat API on the same configurable backend used by the rest of
+  // the app. The previous hard-coded localhost address only worked locally.
+  const API_URL = `${
+    import.meta.env.VITE_API_URL || "http://localhost:3000"
+  }/api/chats/chat`;
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -366,12 +449,65 @@ function ChatBot() {
 }
 
 function LandingPage() {
+  const pageRef = useRef(null);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const [language, setLanguage] = useState("English");
   const [fontScale, setFontScale] = useState(100);
   const [logoError, setLogoError] = useState(false);
   const [farmer, setFarmer] = useState(null);
+  const [procurementBookings, setProcurementBookings] = useState([]);
+  const [procurementLoading, setProcurementLoading] = useState(true);
+  const [procurementError, setProcurementError] = useState("");
+  const [isReading, setIsReading] = useState(false);
+  const t = (text) => {
+    if (language === "हिंदी") {
+      return HINDI_TRANSLATIONS[text] || text;
+    }
+
+    if (language === "বাংলা") {
+      return BENGALI_TRANSLATIONS[text] || text;
+    }
+
+    return text;
+  };
+
+  const togglePageReading = () => {
+    if (!("speechSynthesis" in window)) {
+      return;
+    }
+
+    if (isReading) {
+      window.speechSynthesis.cancel();
+      setIsReading(false);
+      return;
+    }
+
+    const pageText = pageRef.current?.innerText?.trim();
+
+    if (!pageText) {
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(pageText);
+    utterance.lang =
+      language === "हिंदी"
+        ? "hi-IN"
+        : language === "বাংলা"
+          ? "bn-IN"
+          : "en-IN";
+    utterance.rate = 0.95;
+    utterance.onend = () => setIsReading(false);
+    utterance.onerror = () => setIsReading(false);
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+    setIsReading(true);
+  };
+
+  useEffect(() => {
+    return () => window.speechSynthesis?.cancel();
+  }, []);
 
   // useEffect(() => {
   //   const storedFarmer = axios.get()
@@ -383,6 +519,24 @@ function LandingPage() {
   useEffect(() => {
     document.documentElement.style.fontSize = `${fontScale}%`;
   }, [fontScale]);
+
+  useEffect(() => {
+    const loadProcurementBookings = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:3000/api/procurement/bookings"
+        );
+        setProcurementBookings(response.data?.bookings || []);
+      } catch (error) {
+        console.error("Failed to load procurement details:", error);
+        setProcurementError("Unable to load live procurement details.");
+      } finally {
+        setProcurementLoading(false);
+      }
+    };
+
+    loadProcurementBookings();
+  }, []);
 
   const languages = ["English", "हिंदी", "বাংলা"];
 
@@ -413,36 +567,54 @@ function LandingPage() {
     },
   ];
 
+  const totalOfferedQuantity = procurementBookings.reduce(
+    (total, booking) => total + Number(booking.offeredQuantity || 0),
+    0
+  );
+  const totalProcurementValue = procurementBookings.reduce(
+    (total, booking) => total + Number(booking.procurementAmount || 0),
+    0
+  );
+  const completedQuantity = procurementBookings
+    .filter((booking) => booking.decision === "Accepted")
+    .reduce(
+      (total, booking) => total + Number(booking.verifiedQuantity || 0),
+      0
+    );
+  const uniqueFarmers = new Set(
+    procurementBookings.map((booking) => booking.farmerId || booking.farmerPhone)
+  ).size;
+
   const stats = [
     {
-      title: "Registered Farmers",
-      value: "22,52,712",
+      title: "Procurement Bookings",
+      value: procurementLoading ? "Loading..." : procurementBookings.length.toLocaleString("en-IN"),
       icon: Users,
     },
     {
-      title: "Procured Quantity",
-      value: "49,16,744 MT",
+      title: "Offered Quantity",
+      value: procurementLoading ? "Loading..." : `${totalOfferedQuantity.toLocaleString("en-IN")} kg`,
       icon: Wheat,
     },
     {
-      title: "Value Of Procured Paddy",
-      value: "₹1,13,71,43,09,727",
+      title: "Procurement Value",
+      value: procurementLoading ? "Loading..." : `₹${totalProcurementValue.toLocaleString("en-IN")}`,
       icon: IndianRupee,
     },
     {
-      title: "Dispatch To Rice Mill",
-      value: "45,03,324 MT",
+      title: "Completed Quantity",
+      value: procurementLoading ? "Loading..." : `${completedQuantity.toLocaleString("en-IN")} kg`,
       icon: Truck,
     },
     {
       title: "Farmers Benefitted",
-      value: "14,03,908",
+      value: procurementLoading ? "Loading..." : uniqueFarmers.toLocaleString("en-IN"),
       icon: Sprout,
     },
   ];
 
   return (
-    <div className="min-h-screen bg-brand-bg text-gray-800">
+    <div ref={pageRef} className="min-h-screen bg-brand-bg text-gray-800">
 
       {/* =====================================================
           TOP CONTACT STRIP
@@ -453,7 +625,7 @@ function LandingPage() {
         <div className="mx-auto flex max-w-[1300px] flex-col items-center justify-between gap-1 sm:flex-row">
 
           <span className="font-medium tracking-wide">
-            Fasal Setu — A Smarter Way To Sell Your Harvest
+            {t("Fasal Setu — A Smarter Way To Sell Your Harvest")}
           </span>
 
           <a
@@ -499,11 +671,11 @@ function LandingPage() {
             <div>
 
               <h1 className="text-2xl font-extrabold leading-tight text-brand-deep md:text-3xl">
-                Fasal Setu
+                {t("Fasal Setu")}
               </h1>
 
               <p className="text-xs font-semibold text-brand-teal md:text-sm">
-                A Smarter Way To Sell Your Harvest
+                {t("A Smarter Way To Sell Your Harvest")}
               </p>
 
             </div>
@@ -517,7 +689,7 @@ function LandingPage() {
 
             <button
               onClick={() => setFontScale((s) => Math.max(80, s - 10))}
-              aria-label="Decrease text size"
+              aria-label={t("Decrease text size")}
               className="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-semibold hover:bg-gray-50"
             >
               A-
@@ -525,17 +697,18 @@ function LandingPage() {
 
             <button
               onClick={() => setFontScale((s) => Math.min(120, s + 10))}
-              aria-label="Increase text size"
+              aria-label={t("Increase text size")}
               className="rounded border border-gray-300 bg-white px-3 py-2 text-sm font-semibold hover:bg-gray-50"
             >
               A+
             </button>
 
             <button
-              aria-label="Screen reader support"
+              onClick={togglePageReading}
+              aria-label={t("Screen reader support")}
               className="rounded border border-gray-300 bg-white px-3 py-2 text-sm hover:bg-gray-50"
             >
-              <Volume2 size={16} />
+              {isReading ? <VolumeX size={16} /> : <Volume2 size={16} />}
             </button>
 
 
@@ -623,8 +796,16 @@ function LandingPage() {
                 A+
               </button>
 
-              <button className="flex-1 rounded border border-gray-300 py-2 text-sm">
-                <Volume2 size={16} className="mx-auto" />
+              <button
+                onClick={togglePageReading}
+                aria-label={t("Screen reader support")}
+                className="flex-1 rounded border border-gray-300 py-2 text-sm"
+              >
+                {isReading ? (
+                  <VolumeX size={16} className="mx-auto" />
+                ) : (
+                  <Volume2 size={16} className="mx-auto" />
+                )}
               </button>
 
             </div>
@@ -632,7 +813,7 @@ function LandingPage() {
             <div>
 
               <p className="mb-2 text-xs font-semibold uppercase text-gray-400">
-                Select Language
+                {t("Select Language")}
               </p>
 
               <div className="flex gap-2">
@@ -680,14 +861,13 @@ function LandingPage() {
           <div className="flex items-center">
 
             <div className="shrink-0 bg-amber-500 px-5 py-3 text-sm font-bold text-white">
-              NOTICE
+              {t("NOTICE")}
             </div>
 
             <div className="overflow-hidden px-5 py-3">
 
               <p className="whitespace-nowrap text-sm font-medium text-amber-900">
-                Fasal Setu — Please check the latest updates on paddy
-                procurement and farmer registration before proceeding.
+                {t("Fasal Setu — Please check the latest updates on paddy procurement and farmer registration before proceeding.")}
               </p>
 
             </div>
@@ -748,19 +928,17 @@ function LandingPage() {
             <div className="absolute bottom-0 left-0 right-0 p-7 text-white md:p-10">
 
               <span className="inline-block rounded-full bg-brand-green px-4 py-1.5 text-xs font-bold uppercase tracking-wide">
-                For Farmers
+                {t("For Farmers")}
               </span>
 
               <h2 className="mt-4 text-3xl font-bold leading-tight md:text-5xl">
-                Sell Your Harvest,
+                {t("Sell Your Harvest,")}
                 <br />
-                The Smarter Way
+                {t("The Smarter Way")}
               </h2>
 
               <p className="mt-4 max-w-xl text-sm leading-7 text-white/90 md:text-base">
-                Register as a farmer on Fasal Setu and connect directly with
-                procurement centres to sell your paddy with ease and
-                transparency.
+                {t("Register as a farmer on Fasal Setu and connect directly with procurement centres to sell your paddy with ease and transparency.")}
               </p>
 
               <div className="mt-6">
@@ -769,7 +947,7 @@ function LandingPage() {
                   to="/farmer-register"
                   className="inline-flex items-center gap-2 rounded-lg bg-white px-7 py-3 text-sm font-bold text-brand-deep shadow-lg transition-all duration-200 hover:-translate-y-1 hover:bg-brand-mint"
                 >
-                  Farmer Registration
+                  {t("Farmer Registration")}
                   <ArrowRight size={16} />
                 </Link>
 
@@ -789,7 +967,7 @@ function LandingPage() {
             <div className="brand-gradient px-5 py-4">
 
               <h2 className="text-sm font-bold tracking-wide text-white">
-                LOGIN AS
+                {t("LOGIN AS")}
               </h2>
 
             </div>
@@ -814,11 +992,11 @@ function LandingPage() {
                   <div className="flex-1">
 
                     <p className="text-sm font-semibold text-gray-700 group-hover:text-brand-deep">
-                      {option.title}
+                      {t(option.title)}
                     </p>
 
                     <p className="mt-0.5 text-xs text-gray-400">
-                      {option.description}
+                      {t(option.description)}
                     </p>
 
                   </div>
@@ -835,7 +1013,7 @@ function LandingPage() {
 
             <div className="bg-brand-bg px-5 py-3 text-center">
               <p className="text-[11px] text-gray-500">
-                Secure Farmer Portal
+                {t("Secure Farmer Portal")}
               </p>
             </div>
 
@@ -845,7 +1023,7 @@ function LandingPage() {
 
 
         {/* =====================================================
-            PROCUREMENT DETAILS
+              PROCUREMENT DETAILS
         ===================================================== */}
 
         <section className="mt-10">
@@ -853,7 +1031,7 @@ function LandingPage() {
           <div className="mb-5">
 
             <h2 className="text-2xl font-bold text-brand-deep">
-              Procurement Details
+              {t("Procurement Details")}
             </h2>
 
             <div className="mt-2 h-1 w-16 rounded bg-brand-green" />
@@ -861,6 +1039,12 @@ function LandingPage() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+
+            {procurementError && (
+              <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700 sm:col-span-2 lg:col-span-5">
+                {t(procurementError)}
+              </p>
+            )}
 
             {stats.map((stat) => {
               const Icon = stat.icon;
@@ -877,7 +1061,7 @@ function LandingPage() {
                   </div>
 
                   <p className="mt-4 text-xs font-bold uppercase tracking-wide text-gray-400">
-                    {stat.title}
+                    {t(stat.title)}
                   </p>
 
                   <p className="mt-2 text-xl font-bold text-brand-deep">
@@ -924,9 +1108,9 @@ function LandingPage() {
             </div>
 
             <p className="mt-4 text-sm leading-7 text-white/70">
-              A Smarter Way To Sell Your Harvest
+              {t("A Smarter Way To Sell Your Harvest")}
               <br />
-              Connecting farmers directly to procurement centres.
+              {t("Connecting farmers directly to procurement centres.")}
             </p>
 
           </div>
@@ -937,25 +1121,25 @@ function LandingPage() {
           <div>
 
             <h3 className="font-bold">
-              Important Links
+                {t("Important Links")}
             </h3>
 
             <div className="mt-4 space-y-3 text-sm text-white/70">
 
               <Link to="/farmer-register" className="block hover:text-white">
-                Farmer Registration
+                {t("Farmer Registration")}
               </Link>
 
               <Link to="/farmer-aadhar" className="block hover:text-white">
-                Farmer Login
+                {t("Farmer Login")}
               </Link>
 
               <Link to="/admin-aadhar" className="block hover:text-white">
-                Admin Login
+                {t("Admin Login")}
               </Link>
 
               <Link to="/government-aadhar" className="block hover:text-white">
-                Government Login
+                {t("Government Login")}
               </Link>
 
             </div>
@@ -968,7 +1152,7 @@ function LandingPage() {
           <div>
 
             <h3 className="font-bold">
-              Contact
+              {t("Contact")}
             </h3>
 
             <a
@@ -980,9 +1164,9 @@ function LandingPage() {
             </a>
 
             <p className="mt-3 text-sm leading-7 text-white/70">
-              Available for farmer support and procurement
+              {t("Available for farmer support and procurement")}
               <br />
-              related queries.
+              {t("related queries.")}
             </p>
 
           </div>
@@ -997,7 +1181,7 @@ function LandingPage() {
           <div className="mx-auto flex max-w-[1300px] flex-col justify-between gap-3 px-5 py-5 text-xs text-white/50 md:flex-row">
 
             <p>
-              © 2026 Fasal Setu. All Rights Reserved.
+              {t("© 2026 Fasal Setu. All Rights Reserved.")}
             </p>
 
             <p>

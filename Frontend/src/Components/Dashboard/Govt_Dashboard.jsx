@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import {
   Landmark,
   ShieldCheck,
@@ -25,6 +26,7 @@ import {
   ChevronUp,
   Loader2,
   RefreshCw,
+  User,
 } from "lucide-react";
 
 // ======================================================
@@ -1808,6 +1810,7 @@ const AlertIcon = () => (
 // ======================================================
 
 const GovtLogin = () => {
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] =
     useState(false);
 
@@ -1826,6 +1829,10 @@ const GovtLogin = () => {
         block: "start",
       });
     }
+  };
+
+  const handleProfile = () => {
+    navigate("/GovtPRofile");
   };
 
   if (page === "controller") {
@@ -1905,6 +1912,14 @@ const GovtLogin = () => {
           </nav>
 
           <button
+            onClick={handleProfile}
+            className="hidden sm:flex items-center gap-2 bg-blue-950 hover:bg-blue-900 text-white px-4 py-2 rounded-lg text-sm font-semibold"
+          >
+            <User size={16} />
+            <span>Profile</span>
+          </button>
+
+          <button
             className="sm:hidden text-blue-950"
             onClick={() =>
               setMenuOpen(
@@ -1934,6 +1949,14 @@ const GovtLogin = () => {
                 {link.label}
               </button>
             ))}
+
+            <button
+              onClick={handleProfile}
+              className="flex items-center gap-2 text-left px-6 py-3 text-base text-blue-900 font-semibold"
+            >
+              <User size={19} />
+              Profile
+            </button>
           </div>
         )}
       </header>

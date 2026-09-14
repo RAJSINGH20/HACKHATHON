@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -8,6 +9,7 @@ const FarmerLogin = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { setAuthenticatedUser } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -32,7 +34,7 @@ const FarmerLogin = () => {
       );
 
       if (res.data?.user) {
-        localStorage.setItem("farmerUser", JSON.stringify(res.data.user));
+        setAuthenticatedUser("farmer", res.data.user);
       }
 
       navigate("/farmer-dashboard");

@@ -24,6 +24,9 @@ import AdminAadhaarCheck from "./Components/Addhar/AdminAddhar.jsx";
 import FarmerAadhaarCheck from "./Components/Addhar/FarmerAddhar.jsx";
 import GovtAadhaarCheck from "./Components/Addhar/GovtAddhar.jsx";
 import ProtectedRoute from "./Components/ProtectedRoute.jsx";
+import AdminProfile from "./Components/Profile/AdminProfile.jsx";
+import Farmer_profile from "./Components/Profile/Farmer_profile.jsx";
+import Govt_profile from "./Components/Profile/Govt_profile.jsx";
 
 function App() {
   return (
@@ -134,6 +137,24 @@ function App() {
       element={<GovtAadhaarCheck />} 
     />
 
+      {/* ================= PROFILE ================= */}
+
+      <Route
+        path="/AdminProfile"
+        element={<AdminProfile/>}
+      />
+
+      <Route
+        path="/FarmerProfile"
+        element={<Farmer_profile/>}
+      />
+
+      <Route
+        path="/GovtPRofile"
+        element={<Govt_profile/>}
+      />
+
+      <Route/>
     </Routes>
   );
 }

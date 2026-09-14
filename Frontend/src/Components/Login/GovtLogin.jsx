@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import axios from "axios";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 const API_URL = import.meta.env.CLIENT_URL || "http://localhost:3000";
 
@@ -25,6 +26,7 @@ const GovtLogin = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { setAuthenticatedUser } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -37,7 +39,7 @@ const GovtLogin = () => {
       });
 
       if (res.data?.user) {
-        localStorage.setItem("govtUser", JSON.stringify(res.data.user));
+        setAuthenticatedUser("govt", res.data.user);
       }
 
       navigate("/government-dashboard");

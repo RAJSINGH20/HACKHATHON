@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
 import { Admin } from "../models/Admin.model.js";
 import { Farmer } from "../models/farmer.model.js";
 import { Govt } from "../models/govt.model.js";
@@ -127,6 +128,79 @@ export const farmerLogin = async (req, res) => {
     }
 }
 
+export const getFarmerProfile = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ success: false, message: "Invalid farmer id" });
+        }
+
+        const farmer = await Farmer.findById(id).select("-password");
+
+        if (!farmer) {
+            return res.status(404).json({ success: false, message: "Farmer not found" });
+        }
+
+        return res.status(200).json({ success: true, user: farmer });
+    } catch (error) {
+        console.error("GET FARMER PROFILE ERROR:", error);
+        return res.status(500).json({ success: false, message: "Server error" });
+    }
+};
+
+export const updateFarmerProfile = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, mobile, aadhaar, village, district, state } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ success: false, message: "Invalid farmer id" });
+        }
+
+        if (!name || !mobile || !aadhaar || !village || !district || !state) {
+            return res.status(400).json({
+                success: false,
+                message: "Name, mobile, Aadhaar, village, district and state are required",
+            });
+        }
+
+        const farmer = await Farmer.findByIdAndUpdate(
+            id,
+            {
+                name: name.trim(),
+                mobile: mobile.trim(),
+                aadhaar: aadhaar.trim(),
+                village: village.trim(),
+                district: district.trim(),
+                state: state.trim(),
+            },
+            { new: true, runValidators: true }
+        ).select("-password");
+
+        if (!farmer) {
+            return res.status(404).json({ success: false, message: "Farmer not found" });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Farmer profile updated successfully",
+            user: farmer,
+        });
+    } catch (error) {
+        console.error("UPDATE FARMER PROFILE ERROR:", error);
+
+        if (error.code === 11000) {
+            return res.status(409).json({
+                success: false,
+                message: "Mobile number or Aadhaar is already in use",
+            });
+        }
+
+        return res.status(500).json({ success: false, message: "Server error" });
+    }
+};
+
 
 // ==========================================
 // ADMIN REGISTRATION  &&    LOGIN
@@ -245,6 +319,99 @@ export const adminLogin = async (req, res) => {
         },
     });
 }
+
+export const getAdminProfile = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid admin id",
+            });
+        }
+
+        const admin = await Admin.findById(id).select("-password");
+
+        if (!admin) {
+            return res.status(404).json({
+                success: false,
+                message: "Admin not found",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            user: admin,
+        });
+    } catch (error) {
+        console.error("GET ADMIN PROFILE ERROR:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Server error",
+        });
+    }
+};
+
+export const updateAdminProfile = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, email, mobile, department, adminId } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid admin id",
+            });
+        }
+
+        if (!name || !email || !mobile || !department || !adminId) {
+            return res.status(400).json({
+                success: false,
+                message: "Name, email, mobile, department and admin ID are required",
+            });
+        }
+
+        const admin = await Admin.findByIdAndUpdate(
+            id,
+            {
+                name: name.trim(),
+                email: email.trim().toLowerCase(),
+                mobile: mobile.trim(),
+                department: department.trim(),
+                adminId: adminId.trim(),
+            },
+            { new: true, runValidators: true }
+        ).select("-password");
+
+        if (!admin) {
+            return res.status(404).json({
+                success: false,
+                message: "Admin not found",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Admin profile updated successfully",
+            user: admin,
+        });
+    } catch (error) {
+        console.error("UPDATE ADMIN PROFILE ERROR:", error);
+
+        if (error.code === 11000) {
+            return res.status(409).json({
+                success: false,
+                message: "Email, mobile or admin ID is already in use",
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: "Server error",
+        });
+    }
+};
 
 // ==========================================
 // GOVERNMENT REGISTRATION   &&    LOGIN
@@ -366,6 +533,79 @@ export const govtLogin = async (req, res) => {
     });
 }
 
+export const getGovtProfile = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ success: false, message: "Invalid government user id" });
+        }
+
+        const govt = await Govt.findById(id).select("-password");
+
+        if (!govt) {
+            return res.status(404).json({ success: false, message: "Government account not found" });
+        }
+
+        return res.status(200).json({ success: true, user: govt });
+    } catch (error) {
+        console.error("GET GOVERNMENT PROFILE ERROR:", error);
+        return res.status(500).json({ success: false, message: "Server error" });
+    }
+};
+
+export const updateGovtProfile = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, email, mobile, department, governmentId, office } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ success: false, message: "Invalid government user id" });
+        }
+
+        if (!name || !email || !mobile || !department || !governmentId || !office) {
+            return res.status(400).json({
+                success: false,
+                message: "Name, email, mobile, department, government ID and office are required",
+            });
+        }
+
+        const govt = await Govt.findByIdAndUpdate(
+            id,
+            {
+                name: name.trim(),
+                email: email.trim().toLowerCase(),
+                mobile: mobile.trim(),
+                department: department.trim(),
+                governmentId: governmentId.trim(),
+                office: office.trim(),
+            },
+            { new: true, runValidators: true }
+        ).select("-password");
+
+        if (!govt) {
+            return res.status(404).json({ success: false, message: "Government account not found" });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Government profile updated successfully",
+            user: govt,
+        });
+    } catch (error) {
+        console.error("UPDATE GOVERNMENT PROFILE ERROR:", error);
+
+        if (error.code === 11000) {
+            return res.status(409).json({
+                success: false,
+                message: "Email, mobile or government ID is already in use",
+            });
+        }
+
+        return res.status(500).json({ success: false, message: "Server error" });
+    }
+};
+
 export const getAllFarmers = async (req, res) => {
     try {
         const farmers = await Farmer.find();
@@ -382,3 +622,4 @@ export const getAllFarmers = async (req, res) => {
         });
     }
 };
+

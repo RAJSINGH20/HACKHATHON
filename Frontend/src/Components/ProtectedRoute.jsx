@@ -1,9 +1,10 @@
 import { Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.jsx";
 
 function ProtectedRoute({ role, children }) {
-  const storedUser = localStorage.getItem(`${role}User`);
+  const { users } = useAuth();
 
-  if (!storedUser) {
+  if (!users[role]) {
     return <Navigate to={`/${role === "govt" ? "government" : role}-login`} replace />;
   }
 

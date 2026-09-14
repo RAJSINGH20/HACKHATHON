@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useAuth } from "../../context/AuthContext.jsx";
 import {
   ArrowLeft,
   User,
@@ -10,7 +11,8 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
-const API_URL = import.meta.env.CLIENT_URL || "http://localhost:3000";
+const VITE_API_URL = import.meta.env.VITE_API_URL;
+const CREATE_BOOKING_URL = `${VITE_API_URL}/api/bookings/createBooking`;
 
 const PRODUCTS = [
   "Wheat",
@@ -23,6 +25,7 @@ const PRODUCTS = [
 
 const BookingPage = () => {
   const navigate = useNavigate();
+  const { users } = useAuth();
 
   const [form, setForm] = useState({
     firstName: "",
@@ -88,8 +91,8 @@ const BookingPage = () => {
 
     try {
       const { data } = await axios.post(
-        `${API_URL}/api/bookings/createBooking`,
-        form,
+        CREATE_BOOKING_URL,
+        { ...form, farmerId: users.farmer?.id || null },
         {
           withCredentials: true
         }

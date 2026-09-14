@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Phone, Mail, MapPin, Menu, ArrowLeft,
   ShieldCheck, User, Landmark, Users, ClipboardList,
-  Wheat, FileCheck2, BarChart3, Bell, Settings,
+  Wheat, FileCheck2, BarChart3, Bell,
 } from "lucide-react";
+
 
 // ---- Content -------------------------------------------------------------
 
@@ -210,11 +212,17 @@ const AdminDashboard = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [page, setPage] = useState("dashboard"); // dashboard | admin | farmer | govt
 
+  const navigate = useNavigate();
+
   const scrollTo = (id) => {
     setMenuOpen(false);
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+
+  const handleprofile = () =>{
+    navigate("/AdminProfile")
+  }
 
   if (page === "admin") return <AdminControlPage onBack={() => setPage("dashboard")} />;
   if (page === "farmer") return <FarmerControlPage onBack={() => setPage("dashboard")} />;
@@ -225,51 +233,81 @@ const AdminDashboard = () => {
       <style>{css}</style>
 
       {/* NAV */}
-      <header className="sticky top-0 z-50 bg-stone-50/95 backdrop-blur border-b border-green-800/10">
-        <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-3.5">
+     {/* NAV */}
+<header className="sticky top-0 z-50 bg-stone-50/95 backdrop-blur border-b border-green-800/10">
+  <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-3.5">
+
+    {/* LOGO */}
+    <button
+      className="flex items-center gap-2 font-serif text-xl font-bold text-green-900"
+      onClick={() => scrollTo("home")}
+    >
+      <span className="text-2xl">🌾</span>
+      <span>Kisaan Setu</span>
+    </button>
+
+    {/* DESKTOP NAV */}
+    <div className="hidden sm:flex items-center gap-4">
+
+      <nav className="flex gap-1">
+        {NAV_LINKS.map((link) => (
           <button
-            className="flex items-center gap-2 font-serif text-xl font-bold text-green-900"
-            onClick={() => scrollTo("home")}
+            key={link.id}
+            className="px-2 py-2 text-sm text-stone-700 hover:text-green-800"
+            onClick={() => scrollTo(link.id)}
           >
-            <span className="text-2xl">🌾</span>
-            <span>Kisaan Setu</span>
+            {link.label}
           </button>
+        ))}
+      </nav>
 
-          <nav className="hidden sm:flex gap-1">
-            {NAV_LINKS.map((link) => (
-              <button
-                key={link.id}
-                className="px-2 py-2 text-sm text-stone-700 hover:text-green-800"
-                onClick={() => scrollTo(link.id)}
-              >
-                {link.label}
-              </button>
-            ))}
-          </nav>
+      {/* PROFILE BUTTON */}
+      <button
+        onClick={handleprofile}
+        className="flex items-center gap-2 bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+      >
+        <User size={17} />
+        <span>Profile</span>
+      </button>
 
-          <button
-            className="sm:hidden text-green-900"
-            onClick={() => setMenuOpen((v) => !v)}
-            aria-label="Toggle menu"
-          >
-            <Menu size={22} />
-          </button>
-        </div>
+    </div>
 
-        {menuOpen && (
-          <div className="sm:hidden flex flex-col">
-            {NAV_LINKS.map((link) => (
-              <button
-                key={link.id}
-                className="text-left px-6 py-3 text-base text-stone-700 border-t border-green-800/10"
-                onClick={() => scrollTo(link.id)}
-              >
-                {link.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </header>
+    {/* MOBILE MENU */}
+    <button
+      className="sm:hidden text-green-900"
+      onClick={() => setMenuOpen((v) => !v)}
+      aria-label="Toggle menu"
+    >
+      <Menu size={22} />
+    </button>
+  </div>
+
+  {/* MOBILE NAV */}
+  {menuOpen && (
+    <div className="sm:hidden flex flex-col border-t border-green-800/10">
+
+      {NAV_LINKS.map((link) => (
+        <button
+          key={link.id}
+          className="text-left px-6 py-3 text-base text-stone-700 border-b border-green-800/10"
+          onClick={() => scrollTo(link.id)}
+        >
+          {link.label}
+        </button>
+      ))}
+
+      {/* MOBILE PROFILE */}
+      <button
+        onClick={handleprofile}
+        className="flex items-center gap-2 text-left px-6 py-3 text-base text-green-800 font-semibold"
+      >
+        <User size={19} />
+        Profile
+      </button>
+
+    </div>
+  )}
+</header>
 
       {/* HOME */}
       <section id="home" className="max-w-6xl mx-auto px-6 py-16 md:py-20 flex flex-wrap items-center gap-12">

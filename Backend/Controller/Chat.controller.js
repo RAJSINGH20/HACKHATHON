@@ -1,4 +1,5 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ path: new URL("../.env", import.meta.url) });
 import axios from "axios";
 import OpenAI from "openai";
 
@@ -13,13 +14,28 @@ const client = new OpenAI({
 });
 
 const BOOKINGS_API_URL =
-    "http://localhost:3000/api/bookings/getBookings";
+    `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`}/api/bookings/getBookings`;
+
+const hasOpenRouterKey = () =>
+    typeof process.env.OPENROUTER_API_KEY === "string" &&
+    process.env.OPENROUTER_API_KEY.startsWith("sk-or-v1-");
+
+const sendConfigurationError = (res) =>
+    res.status(503).json({
+        success: false,
+        message:
+            "Chat is not configured. Add a valid OpenRouter API key to Backend/.env and restart the backend.",
+    });
 
 export const chatController = async (req, res) => {
     try {
+        if (!hasOpenRouterKey()) {
+            return sendConfigurationError(res);
+        }
+
         const { message } = req.body;
 
-        if (!message || !message.trim()) {
+        if (typeof message !== "string" || !message.trim()) {
             return res.status(400).json({
                 success: false,
                 message: "Message is required",
@@ -27,15 +43,20 @@ export const chatController = async (req, res) => {
         }
 
         // Get live booking data
-        const bookingResponse = await axios.get(
-            BOOKINGS_API_URL
-        );
-
-        const data = bookingResponse.data;
-
-        const bookings = Array.isArray(data)
-            ? data
-            : data.bookings || data.data || [];
+        // Booking data enriches answers, but an unavailable database must not
+        // make the general-purpose assistant unusable.
+        let bookings = [];
+        try {
+            const bookingResponse = await axios.get(BOOKINGS_API_URL, {
+                timeout: 5000,
+            });
+            const data = bookingResponse.data;
+            bookings = Array.isArray(data)
+                ? data
+                : data.bookings || data.data || [];
+        } catch (bookingError) {
+            console.warn("Unable to load booking data for chat:", bookingError.message);
+        }
 
         const systemPrompt = `
 You are "Setu Sahayak", the AI assistant for Farmer AI.
@@ -111,9 +132,13 @@ IMPORTANT RULES:
 
 export const FamerAIChatController = async (req, res) => {
     try {
+        if (!hasOpenRouterKey()) {
+            return sendConfigurationError(res);
+        }
+
         const { message } = req.body;
 
-        if (!message || !message.trim()) {
+        if (typeof message !== "string" || !message.trim()) {
             return res.status(400).json({
                 success: false,
                 message: "Message is required",
@@ -187,8 +212,9 @@ RULES
   payments, FCFS explanation), answer normally without asking for booking fields.
 `;
 
-        const res = await client.chat.completions.create({
-            model: "gpt-4",
+        const completion = await client.chat.completions.create({
+            // This is an OpenRouter client, so use an OpenRouter model id.
+            model: "gpt-6-astra",
             messages: [
                 {
                     role: "system",
@@ -202,7 +228,7 @@ RULES
         });
 
         const answer =
-            res.choices?.[0]?.message?.content ||
+            completion.choices?.[0]?.message?.content ||
             "Sorry, I could not generate a response.";
 
         return res.status(200).json({

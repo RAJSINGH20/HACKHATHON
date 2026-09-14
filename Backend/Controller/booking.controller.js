@@ -184,8 +184,7 @@ export const createBooking = async (req, res) => {
                         ).length;
 
                     if (
-                        alreadyBooked <
-                        centre.capacityPerSlot
+                        alreadyBooked < 1
                     ) {
                         selectedCentre =
                             centre;
@@ -368,8 +367,10 @@ export const getBookings = async (
     res
 ) => {
     try {
+        const { farmerId } = req.query;
+        const filter = farmerId ? { farmerId } : {};
         const bookings =
-            await Booking.find()
+            await Booking.find(filter)
                 .sort({
                     createdAt: -1,
                 })
