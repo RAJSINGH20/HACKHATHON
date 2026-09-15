@@ -205,6 +205,12 @@ function ChatBot() {
         API_URL,
         {
           message: trimmed,
+          history: messages
+            .filter((item) => item.from === "user" || item.from === "bot")
+            .map((item) => ({
+              role: item.from === "bot" ? "assistant" : "user",
+              content: item.text,
+            })),
         },
         {
           headers: {
