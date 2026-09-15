@@ -179,7 +179,7 @@ const GovtLogin = () => {
           </motion.button>
 
           {/* Register */}
-          <motion.div variants={itemVariants} className="text-center pt-1">
+          {/* <motion.div variants={itemVariants} className="text-center pt-1">
             <span className="text-sm text-gray-500">Don't have an account? </span>
             <Link
               to="/government-register"
@@ -187,7 +187,7 @@ const GovtLogin = () => {
             >
               Register
             </Link>
-          </motion.div>
+          </motion.div> */}
         </motion.form>
 
         {/* Footer */}
