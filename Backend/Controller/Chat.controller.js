@@ -1,12 +1,24 @@
 import dotenv from "dotenv";
 dotenv.config({ path: new URL("../.env", import.meta.url) });
 import axios from "axios";
-import ollama from "ollama";
+import OpenAI from "openai";
 
-const OLLAMA_MODEL = "deepseek-r1:1.5b";
+const GROQ_API_KEY =
+    process.env.GROQ_API_KEY || process.env.OPENROUTER_API_KEY;
+
+console.log("Groq Key Loaded:", !!GROQ_API_KEY);
+
+const client = new OpenAI({
+    baseURL: "https://api.groq.com/openai/v1",
+    apiKey: GROQ_API_KEY,
+});
 
 const BOOKINGS_API_URL =
-    `${process.env.CLIENT_URL || `http://localhost:${process.env.PORT || 3000}`}/api/bookings/getBookings`;
+    `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`}/api/bookings/getBookings`;
+
+const hasGroqKey = () =>
+    typeof GROQ_API_KEY === "string" &&
+    GROQ_API_KEY.startsWith("gsk_");
 
 const parseBookingDetails = (message) => {
     const match = message.match(
@@ -26,121 +38,12 @@ const parseBookingDetails = (message) => {
     };
 };
 
-const BOOKING_PRODUCTS = "Wheat|Paddy|Mustard|Maize|Sugarcane|Cotton";
-const BOOKING_INTENT = /\b(book|reserve|schedule)\b/i;
-
-const isBookingLookup = (text) => {
-    const normalized = text.toLowerCase();
-    return /\b(show|view|list|check|payment|status|history|details)\b/.test(normalized) &&
-        /\b(bookings?|slots?)\b/.test(normalized);
-};
-
-const isBookingRequest = (text) => !isBookingLookup(text) && BOOKING_INTENT.test(text);
-
-const collectBookingDetails = (message, history = []) => {
-    const userMessages = [
-        ...history
-            .filter((item) => item.role === "user")
-            .map((item) => item.content),
-        message,
-    ].join("\n");
-    const turns = [
-        ...history,
-        { role: "user", content: message },
-    ];
-    const lastAssistantMessage = [...history]
-        .reverse()
-        .find((item) => item.role === "assistant")?.content?.toLowerCase() || "";
-
-    const numberedDetails = parseBookingDetails(userMessages);
-    const phone = userMessages.match(/\b\d{10}\b/)?.[0];
-    const product = userMessages.match(new RegExp(`\\b(${BOOKING_PRODUCTS})\\b`, "i"))?.[1];
-    const weightWithUnit = userMessages.match(/\b(\d+(?:\.\d+)?)\s*kg\b/i)?.[1];
-    const labeledWeight = userMessages.match(/\b(?:weight|quantity)\s*[:=-]?\s*(\d+(?:\.\d+)?)/i)?.[1];
-    const nameMatch = userMessages.match(/\b(?:my name is|name is)\s+([A-Za-z]+)(?:\s+([A-Za-z]+))?/i);
-    const completeNameMatch = message.match(/\b(?:my name is\s+)?([A-Za-z]+)\s+([A-Za-z]+)\s*,?\s*\d{10}\b/i);
-    const commaNameParts = message.split(",").map((part) => part.trim());
-    const commaNameMatch = commaNameParts.length >= 2 &&
-        /^[A-Za-z]+$/.test(commaNameParts[0]) &&
-        /^[A-Za-z]+$/.test(commaNameParts[1])
-        ? { firstName: commaNameParts[0], lastName: commaNameParts[1] }
-        : null;
-    const labeledFirstName = userMessages.match(/\bfirst\s*name\s*[:=-]\s*([A-Za-z]+)/i)?.[1];
-    const labeledLastName = userMessages.match(/\blast\s*name\s*[:=-]\s*([A-Za-z]+)/i)?.[1];
-
-    let firstName = numberedDetails?.firstName || labeledFirstName || nameMatch?.[1] || completeNameMatch?.[1] || commaNameMatch?.firstName;
-    let lastName = numberedDetails?.lastName || labeledLastName || nameMatch?.[2] || completeNameMatch?.[2] || commaNameMatch?.lastName;
-
-    turns.forEach((turn, index) => {
-        if (turn.role !== "user") return;
-
-        const previousAssistant = turns
-            .slice(0, index)
-            .reverse()
-            .find((item) => item.role === "assistant")?.content?.toLowerCase() || "";
-        const answer = turn.content.trim();
-
-        if ((previousAssistant.includes("first name") || previousAssistant.includes("all booking details")) &&
-            !firstName && /^[A-Za-z]+(?:\s+[A-Za-z]+)?$/.test(answer)) {
-            firstName = answer.split(/\s+/)[0];
-            if (!lastName && answer.split(/\s+/).length > 1) {
-                lastName = answer.split(/\s+/).slice(1).join(" ");
-            }
-        }
-
-        if (previousAssistant.includes("last name") && !lastName) {
-            lastName = answer;
-        }
+const sendConfigurationError = (res) =>
+    res.status(503).json({
+        success: false,
+        message:
+            "Chat is not configured. Add a valid Groq API key as GROQ_API_KEY in Backend/.env and restart the backend.",
     });
-
-    if (lastAssistantMessage.includes("first name") || lastAssistantMessage.includes("your name")) {
-        firstName = firstName || message.trim().split(/\s+/)[0];
-        if (!lastName && message.trim().split(/\s+/).length > 1) {
-            lastName = message.trim().split(/\s+/).slice(1).join(" ");
-        }
-    }
-
-    if (lastAssistantMessage.includes("last name") && !lastName) {
-        lastName = message.trim();
-    }
-
-    const weight = weightWithUnit || labeledWeight || (
-        lastAssistantMessage.match(/weight|quantity|how many kilos|how much/i)
-            ? message.trim().match(/^\d+(?:\.\d+)?$/)?.[0]
-            : undefined
-    );
-
-    return {
-        firstName,
-        lastName,
-        phone: numberedDetails?.phone || phone,
-        product: numberedDetails?.product || (product ? product.charAt(0).toUpperCase() + product.slice(1).toLowerCase() : undefined),
-        weight: numberedDetails?.weight || (weight ? Number(weight) : undefined),
-        inProgress: !isBookingLookup(message) && (
-            isBookingRequest(userMessages) ||
-            Boolean(lastAssistantMessage.match(/first name|last name|phone|crop|product|weight|quantity|all booking details/))
-        ),
-    };
-};
-
-const getMissingBookingField = (details) => {
-    if (!details.firstName) return "first name";
-    if (!details.lastName) return "last name";
-    if (!details.phone) return "10-digit phone number";
-    if (!details.product) return "crop/product (Wheat, Paddy, Mustard, Maize, Sugarcane, or Cotton)";
-    if (!details.weight) return "quantity in kg";
-    return null;
-};
-
-const bookingQuestion = (missingField) => missingField
-    ? `Sure, I can book your slot. Please provide your ${missingField}.`
-    : "Sure, I can book your slot. Please provide your first name, last name, 10-digit phone number, crop/product, and quantity in kg in one message.";
-
-const appendHistory = (history, message, answer) => [
-    ...history,
-    { role: "user", content: message },
-    { role: "assistant", content: answer },
-].slice(-MAX_HISTORY_MESSAGES);
 
 // Max number of previous turns (user+assistant pairs) to keep in context.
 // Increase carefully — more history = more tokens = more cost/latency.
@@ -148,6 +51,10 @@ const MAX_HISTORY_MESSAGES = 10;
 
 export const chatController = async (req, res) => {
     try {
+        if (!hasGroqKey()) {
+            return sendConfigurationError(res);
+        }
+
         const { message, history } = req.body;
 
         if (typeof message !== "string" || !message.trim()) {
@@ -175,31 +82,6 @@ export const chatController = async (req, res) => {
                 )
                 .slice(-MAX_HISTORY_MESSAGES)
             : [];
-
-        const bookingDetails = collectBookingDetails(message, safeHistory);
-        if (bookingDetails.inProgress) {
-            if (getMissingBookingField(bookingDetails)) {
-                const answer = bookingQuestion(null);
-                return res.status(200).json({
-                    success: true,
-                    answer,
-                    history: appendHistory(safeHistory, message, answer),
-                });
-            }
-
-            const bookingResponse = await axios.post(
-                `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`}/api/bookings/createBooking`,
-                { ...bookingDetails, farmerId: null },
-                { timeout: 10000 }
-            );
-            const answer = `Your booking is confirmed for ${bookingDetails.firstName} ${bookingDetails.lastName}. ${bookingDetails.product}, ${bookingDetails.weight} kg, phone ${bookingDetails.phone}.`;
-            return res.status(200).json({
-                success: true,
-                answer,
-                booking: bookingResponse.data.booking,
-                history: appendHistory(safeHistory, message, answer),
-            });
-        }
 
         // ---- Get live booking data ----
         // Booking data enriches answers, but an unavailable database must not
@@ -274,14 +156,16 @@ IMPORTANT RULES:
             { role: "user", content: message },
         ];
 
-        const response = await ollama.chat({
-            model: OLLAMA_MODEL,
+        const response = await client.chat.completions.create({
+            model: "openai/gpt-oss-20b",
             messages,
             temperature: 0.2,
+            max_tokens: 400,
+            reasoning_effort: "low",
         });
 
         const answer =
-            response.message?.content ||
+            response.choices?.[0]?.message?.content ||
             "Sorry, I could not generate a response.";
 
         // Send back the updated history so the frontend can persist it
@@ -322,6 +206,29 @@ export const FamerAIChatController = async (req, res) => {
             });
         }
 
+        const bookingDetails = parseBookingDetails(message.trim());
+
+        if (bookingDetails) {
+            const bookingResponse = await axios.post(
+                `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`}/api/bookings/createBooking`,
+                {
+                    ...bookingDetails,
+                    farmerId: farmerId || null,
+                },
+                { timeout: 10000 }
+            );
+
+            return res.status(200).json({
+                success: true,
+                answer: `Your booking is confirmed for ${bookingDetails.firstName} ${bookingDetails.lastName}. ${bookingDetails.product}, ${bookingDetails.weight} kg, phone ${bookingDetails.phone}.`,
+                booking: bookingResponse.data.booking,
+            });
+        }
+
+        if (!hasGroqKey()) {
+            return sendConfigurationError(res);
+        }
+
         const safeHistory = Array.isArray(history)
             ? history
                 .filter(
@@ -333,36 +240,6 @@ export const FamerAIChatController = async (req, res) => {
                 )
                 .slice(-MAX_HISTORY_MESSAGES)
             : [];
-
-        const bookingDetails = collectBookingDetails(message.trim(), safeHistory);
-
-        if (bookingDetails.inProgress) {
-            if (getMissingBookingField(bookingDetails)) {
-                const answer = bookingQuestion(null);
-                return res.status(200).json({
-                    success: true,
-                    answer,
-                    history: appendHistory(safeHistory, message, answer),
-                });
-            }
-
-            const bookingResponse = await axios.post(
-                `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`}/api/bookings/createBooking`,
-                {
-                    ...bookingDetails,
-                    farmerId: farmerId || null,
-                },
-                { timeout: 10000 }
-            );
-            const answer = `Your booking is confirmed for ${bookingDetails.firstName} ${bookingDetails.lastName}. ${bookingDetails.product}, ${bookingDetails.weight} kg, phone ${bookingDetails.phone}.`;
-
-            return res.status(200).json({
-                success: true,
-                answer,
-                booking: bookingResponse.data.booking,
-                history: appendHistory(safeHistory, message, answer),
-            });
-        }
 
         let bookings = [];
         try {
@@ -463,13 +340,15 @@ Current user authentication status: ${isAuthenticated ? "LOGGED IN" : "NOT LOGGE
             { role: "user", content: message },
         ];
 
-        const completion = await ollama.chat({
-            model: OLLAMA_MODEL,
+        const completion = await client.chat.completions.create({
+            model: "openai/gpt-oss-20b",
             messages,
+            max_tokens: 700,
+            reasoning_effort: "low",
         });
 
         const answer =
-            completion.message?.content ||
+            completion.choices?.[0]?.message?.content ||
             "Sorry, I could not generate a response.";
 
         const updatedHistory = [
