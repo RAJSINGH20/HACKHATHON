@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
-import { Html5QrcodeScanner } from "html5-qrcode";
+import { Html5Qrcode } from "html5-qrcode";
 import { useNavigate } from "react-router-dom";
 import {
   Landmark,
@@ -234,6 +234,9 @@ const ControllerPage = ({ onBack }) => {
   const [verifiedFarmers, setVerifiedFarmers] = useState({});
   const [verifiedQrData, setVerifiedQrData] = useState({});
   const scannerBusy = useRef(false);
+  const scannerRef = useRef(null);
+  const scannerRunningRef = useRef(false);
+  const [cameraActive, setCameraActive] = useState(false);
 
   const verifyFarmerQr = async (rawValue) => {
     try {
@@ -289,34 +292,79 @@ const ControllerPage = ({ onBack }) => {
     }
   };
 
-  useEffect(() => {
-    if (!qrTarget) return undefined;
+  const stopQrScanner = async () => {
+    const scanner = scannerRef.current;
 
-    const scanner = new Html5QrcodeScanner(
-      "farmer-qr-reader",
-      {
-        fps: 10,
-        qrbox: { width: 220, height: 220 },
-        aspectRatio: 1,
-        rememberLastUsedCamera: false,
-        showTorchButtonIfSupported: true,
-      },
-      false
-    );
+    if (!scanner) return;
 
-    scanner.render(
-      (decodedText) => {
-        if (!scannerBusy.current) {
+    try {
+      if (scannerRunningRef.current) {
+        await scanner.stop();
+      }
+      await scanner.clear();
+    } catch (error) {
+      console.warn("Unable to stop QR scanner:", error.message);
+    } finally {
+      scannerRef.current = null;
+      scannerRunningRef.current = false;
+      setCameraActive(false);
+      scannerBusy.current = false;
+    }
+  };
+
+  const startQrScanner = async () => {
+    if (cameraActive || qrLoading) return;
+
+    try {
+      setQrError("");
+      const cameras = await Html5Qrcode.getCameras();
+
+      if (!cameras.length) {
+        throw new Error("No camera was found on this device.");
+      }
+
+      const camera = cameras.find((item) => /back|rear|environment/i.test(item.label)) || cameras[0];
+      const scanner = new Html5Qrcode("farmer-qr-reader");
+      scannerRef.current = scanner;
+
+      await scanner.start(
+        camera.id,
+        {
+          fps: 10,
+          qrbox: { width: 220, height: 220 },
+          aspectRatio: 1,
+        },
+        async (decodedText) => {
+          if (scannerBusy.current) return;
+
           scannerBusy.current = true;
-          verifyFarmerQr(decodedText);
-        }
-      },
-      () => {}
-    );
+          await stopQrScanner();
+          await verifyFarmerQr(decodedText);
+        },
+        () => {}
+      );
+
+      setCameraActive(true);
+    } catch (error) {
+      scannerRef.current = null;
+      scannerRunningRef.current = false;
+      setCameraActive(false);
+      setQrError(
+        error.message?.toLowerCase().includes("permission")
+          ? "Camera permission was denied. Allow camera access in your browser settings and try again."
+          : error.message || "Unable to open the camera."
+      );
+    }
+      scannerRunningRef.current = true;
+  };
+
+  useEffect(() => {
+    if (!qrTarget) {
+      stopQrScanner();
+    }
 
     return () => {
-      scanner.clear().catch(() => {});
-      scannerBusy.current = false;
+      stopQrScanner();
     };
   }, [qrTarget]);
 
@@ -1010,8 +1058,27 @@ const ControllerPage = ({ onBack }) => {
             <div className="mt-5 grid gap-5 lg:grid-cols-[280px_1fr]">
               <div className="min-w-0 rounded-xl bg-white p-2">
                 <div id="farmer-qr-reader" className="w-full max-w-full overflow-hidden" />
+                {!cameraActive && (
+                  <button
+                    type="button"
+                    onClick={startQrScanner}
+                    disabled={qrLoading}
+                    className="mt-2 w-full rounded-lg bg-blue-950 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-900 disabled:opacity-50"
+                  >
+                    {qrLoading ? "Opening camera..." : "Open camera to scan QR"}
+                  </button>
+                )}
+                {cameraActive && (
+                  <button
+                    type="button"
+                    onClick={stopQrScanner}
+                    className="mt-2 w-full rounded-lg border border-blue-200 px-4 py-3 text-sm font-semibold text-blue-950 hover:bg-blue-50"
+                  >
+                    Stop camera
+                  </button>
+                )}
                 <p className="mt-2 text-center text-xs text-slate-500">
-                  Tap Start scanning and allow camera access. Camera scanning requires HTTPS on deployed mobile devices.
+                  Allow camera access when prompted. Camera scanning requires HTTPS on deployed mobile devices.
                 </p>
               </div>
               <div className="rounded-xl bg-white p-4">
