@@ -205,10 +205,6 @@ function ChatBot() {
         API_URL,
         {
           message: trimmed,
-          history: messages.map((item) => ({
-            role: item.from === "bot" ? "assistant" : "user",
-            content: item.text,
-          })),
         },
         {
           headers: {
@@ -225,7 +221,7 @@ function ChatBot() {
       // Axios does NOT use response.ok
       if (!data.success) {
         throw new Error(
-          data.error || data.message || "AI request failed"
+          data.message || "AI request failed"
         );
       }
 
