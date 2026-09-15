@@ -294,7 +294,13 @@ const ControllerPage = ({ onBack }) => {
 
     const scanner = new Html5QrcodeScanner(
       "farmer-qr-reader",
-      { fps: 10, qrbox: { width: 220, height: 220 } },
+      {
+        fps: 10,
+        qrbox: { width: 220, height: 220 },
+        aspectRatio: 1,
+        rememberLastUsedCamera: false,
+        showTorchButtonIfSupported: true,
+      },
       false
     );
 
@@ -1002,7 +1008,12 @@ const ControllerPage = ({ onBack }) => {
             </div>
 
             <div className="mt-5 grid gap-5 lg:grid-cols-[280px_1fr]">
-              <div id="farmer-qr-reader" className="rounded-xl bg-white p-2" />
+              <div className="min-w-0 rounded-xl bg-white p-2">
+                <div id="farmer-qr-reader" className="w-full max-w-full overflow-hidden" />
+                <p className="mt-2 text-center text-xs text-slate-500">
+                  Tap Start scanning and allow camera access. Camera scanning requires HTTPS on deployed mobile devices.
+                </p>
+              </div>
               <div className="rounded-xl bg-white p-4">
                 <label className="block text-sm font-semibold text-slate-700" htmlFor="farmer-qr-value">
                   Manual QR value
@@ -1281,6 +1292,7 @@ const ControllerPage = ({ onBack }) => {
                               />
 
                               <button
+                                type="button"
                                 onClick={() => {
                                   setQrTarget(booking);
                                   setQrError("");
