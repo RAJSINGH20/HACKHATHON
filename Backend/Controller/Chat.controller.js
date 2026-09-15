@@ -6,7 +6,7 @@ import ollama from "ollama";
 const OLLAMA_MODEL = "deepseek-r1:1.5b";
 
 const BOOKINGS_API_URL =
-    `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`}/api/bookings/getBookings`;
+    `${process.env.CLIENT_URL || `http://localhost:${process.env.PORT || 3000}`}/api/bookings/getBookings`;
 
 const parseBookingDetails = (message) => {
     const match = message.match(
