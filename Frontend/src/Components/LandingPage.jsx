@@ -225,7 +225,7 @@ function ChatBot() {
       // Axios does NOT use response.ok
       if (!data.success) {
         throw new Error(
-          data.message || "AI request failed"
+          data.error || data.message || "AI request failed"
         );
       }
 
