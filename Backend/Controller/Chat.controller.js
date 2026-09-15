@@ -16,6 +16,17 @@ const client = new OpenAI({
 const BOOKINGS_API_URL =
     `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`}/api/bookings/getBookings`;
 
+const LOGIN_REQUIRED_MESSAGE =
+    "Please log in as a farmer first to view bookings, slot details, payment status, or other personal booking information.";
+
+const isBookingRelatedQuery = (message) => {
+    const text = message.toLowerCase();
+    const hasBookingTopic = /\b(bookings?|booked|slots?|payment|procurement|harvest|farmer-specific|my sale)\b/.test(text);
+    const asksForPrivateData = /\b(show|view|list|check|find|track|status|details|history|book|reserve|schedule|when|what|which|how much|how many|my|all)\b/.test(text);
+
+    return hasBookingTopic && asksForPrivateData;
+};
+
 const hasGroqKey = () =>
     typeof GROQ_API_KEY === "string" &&
     GROQ_API_KEY.startsWith("gsk_");
@@ -61,6 +72,19 @@ export const chatController = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "Message is required",
+            });
+        }
+
+        if (isBookingRelatedQuery(message)) {
+            return res.status(200).json({
+                success: true,
+                answer: LOGIN_REQUIRED_MESSAGE,
+                requiresLogin: true,
+                history: [
+                    ...(Array.isArray(history) ? history : []),
+                    { role: "user", content: message },
+                    { role: "assistant", content: LOGIN_REQUIRED_MESSAGE },
+                ].slice(-MAX_HISTORY_MESSAGES),
             });
         }
 
