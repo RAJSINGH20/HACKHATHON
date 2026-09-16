@@ -360,6 +360,10 @@ export const createBooking = async (req, res) => {
     }
 };
 
+export const createIVRBooking = async (req, res) => {
+    return createBooking(req, res);
+};
+
 // ======================================================
 // GET ALL BOOKINGS
 // ======================================================

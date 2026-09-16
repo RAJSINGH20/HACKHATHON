@@ -234,7 +234,7 @@ export const FamerAIChatController = async (req, res) => {
 
         if (bookingDetails) {
             const bookingResponse = await axios.post(
-                `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`}/api/bookings/createBooking`,
+                `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`}/api/bookings/ivr/createBooking`,
                 {
                     ...bookingDetails,
                     farmerId: farmerId || null,
