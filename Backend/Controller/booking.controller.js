@@ -360,6 +360,13 @@ export const createBooking = async (req, res) => {
     }
 };
 
+// ======================================================
+// CREATE BOOKING FROM IVR (Exotel Passthru)
+// POST /api/bookings/ivr/createBooking
+// ======================================================
+
+import { Farmer } from "../models/Farmer.js"; // add this import at the top of the file
+
 const PRODUCT_MAP = {
     "1": "Wheat",
     "2": "Rice",
@@ -370,9 +377,15 @@ export const createBookingIVR = async (req, res) => {
     res.set("Content-Type", "text/xml");
 
     try {
-        const callerPhone = req.body.CallFrom || req.query.CallFrom;
+        let callerPhone = req.body.CallFrom || req.query.CallFrom;
         const productDigit = req.body.digits || req.query.digits;
         const weightDigits = req.body.weight || req.query.weight;
+
+        // Normalize phone number: strip +91, spaces, dashes -- keep only last 10 digits
+        if (callerPhone) {
+            callerPhone = callerPhone.replace(/\D/g, ""); // remove all non-digits
+            callerPhone = callerPhone.slice(-10); // keep last 10 digits
+        }
 
         const product = PRODUCT_MAP[productDigit];
 
@@ -384,9 +397,10 @@ export const createBookingIVR = async (req, res) => {
       `);
         }
 
-        const existing = await Booking.findOne({ phone: callerPhone }).sort({ createdAt: -1 });
+        // Look up the FARMER (not Booking) by mobile number
+        const farmer = await Farmer.findOne({ mobile: callerPhone });
 
-        if (!existing) {
+        if (!farmer) {
             return res.send(`
         <Response>
           <Say>Sorry, we could not find your registration. Please register on our website first using this phone number, then call again.</Say>
@@ -394,19 +408,24 @@ export const createBookingIVR = async (req, res) => {
       `);
         }
 
+        // Split farmer.name into firstName/lastName for the Booking schema
+        const nameParts = farmer.name.trim().split(" ");
+        const firstName = nameParts[0];
+        const lastName = nameParts.slice(1).join(" ") || nameParts[0];
+
         const newBooking = await Booking.create({
-            firstName: existing.firstName,
-            lastName: existing.lastName,
+            firstName,
+            lastName,
             phone: callerPhone,
             product,
             weight: Number(weightDigits),
-            farmerId: existing.farmerId || null,
+            farmerId: farmer._id,
             status: "Pending",
         });
 
         return res.send(`
       <Response>
-        <Say>Thank you. Your booking for ${product}, ${weightDigits} kilograms, has been created. You will receive an SMS confirmation shortly.</Say>
+        <Say>Thank you ${firstName}. Your booking for ${product}, ${weightDigits} kilograms, has been created. You will receive an SMS confirmation shortly.</Say>
       </Response>
     `);
     } catch (error) {
