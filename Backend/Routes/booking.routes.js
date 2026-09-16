@@ -4,4 +4,5 @@ const app = Router()
 
 app.post("/createBooking", createBooking)
 app.get("/getBookings", getBookings)
+app.get("/ivr/getBookings", getBookings)
 export default app
