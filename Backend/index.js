@@ -31,8 +31,10 @@ connectDB();
 //    for this project still works without editing this file every deploy.
 const allowedOrigins = [
   "http://localhost:5173",
+  "http://localhost:5174",
   "https://hackhathon-omega.vercel.app",
-  "https://hackhathon-git-main-raj-singhs-projects-fd8d0c78.vercel.app"
+  "https://hackhathon-git-main-raj-singhs-projects-fd8d0c78.vercel.app",
+
 ];
 
 // Matches any preview deployment like:
