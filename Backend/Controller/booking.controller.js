@@ -365,7 +365,7 @@ export const createBooking = async (req, res) => {
 // POST /api/bookings/ivr/createBooking
 // ======================================================
 
-import { Farmer } from "../models/Farmer.js"; // add this import at the top of the file
+import { Farmer } from "../models/farmer.model.js"; // add this import at the top of the file
 
 const PRODUCT_MAP = {
     "1": "Wheat",
