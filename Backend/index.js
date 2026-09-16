@@ -34,6 +34,7 @@ const allowedOrigins = [
   "http://localhost:5174",
   "https://hackhathon-omega.vercel.app",
   "https://hackhathon-git-main-raj-singhs-projects-fd8d0c78.vercel.app",
+  "https://adminhackathon.vercel.app"
 
 ];
 
