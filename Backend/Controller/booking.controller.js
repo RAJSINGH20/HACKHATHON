@@ -360,8 +360,253 @@ export const createBooking = async (req, res) => {
     }
 };
 
-export const createIVRBooking = async (req, res) => {
-    return createBooking(req, res);
+export const IVRcreateBooking = async (req, res) => {
+    try {
+        const {
+            firstName,
+            lastName,
+            phone,
+            product,
+            weight,
+            farmerId,
+        } = req.body;
+
+        console.log(
+            firstName,
+            lastName,
+            phone,
+            product,
+            weight,
+            farmerId
+        );
+
+        // ------------------------------------------
+        // Validate required fields
+        // ------------------------------------------
+
+        if (
+            !firstName ||
+            !lastName ||
+            !phone ||
+            !product ||
+            !weight
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "All fields are required",
+            });
+        }
+
+        // ------------------------------------------
+        // Create booking
+        // ------------------------------------------
+
+        const newBooking = await Booking.create({
+            firstName,
+            lastName,
+            phone,
+            product,
+            weight: Number(weight),
+            farmerId: farmerId || null,
+            status: "Pending",
+        });
+
+        // ------------------------------------------
+        // Find available procurement centres
+        // ------------------------------------------
+
+        const centres = await Procurement.find({
+            isActive: true,
+            productsAccepted: product,
+        }).sort({
+            createdAt: 1,
+        });
+
+        // No procurement centre available
+        if (!centres.length) {
+            return res.status(201).json({
+                success: true,
+                message:
+                    "Booking created, but no procurement centre is currently available",
+                booking: newBooking,
+                assigned: false,
+            });
+        }
+
+        // ------------------------------------------
+        // Slot configuration
+        // ------------------------------------------
+
+        const SLOT_MINUTES = 30;
+
+        const SHIFTS = [
+            {
+                startHour: 10,
+                startMinute: 0,
+                endHour: 14,
+                endMinute: 0,
+            },
+            {
+                startHour: 16,
+                startMinute: 0,
+                endHour: 20,
+                endMinute: 0,
+            },
+        ];
+
+        // ------------------------------------------
+        // Build slots for a particular date
+        // ------------------------------------------
+
+        const buildSlots = (date) => {
+            const slots = [];
+
+            for (const shift of SHIFTS) {
+                const current = new Date(date);
+
+                current.setHours(
+                    shift.startHour,
+                    shift.startMinute,
+                    0,
+                    0
+                );
+
+                const end = new Date(date);
+
+                end.setHours(
+                    shift.endHour,
+                    shift.endMinute,
+                    0,
+                    0
+                );
+
+                while (current < end) {
+                    const start = new Date(current);
+
+                    const slotEnd = new Date(
+                        current.getTime() +
+                            SLOT_MINUTES * 60 * 1000
+                    );
+
+                    // Don't create a slot beyond shift ending time
+                    if (slotEnd > end) {
+                        break;
+                    }
+
+                    slots.push({
+                        start,
+                        end: slotEnd,
+                    });
+
+                    current.setTime(slotEnd.getTime());
+                }
+            }
+
+            return slots;
+        };
+
+        // ------------------------------------------
+        // Check today + next 7 days
+        // ------------------------------------------
+
+        let assigned = false;
+        let assignedCentre = null;
+        let assignedSlot = null;
+
+        for (let day = 0; day < 7 && !assigned; day++) {
+            const date = new Date();
+
+            date.setDate(date.getDate() + day);
+            date.setHours(0, 0, 0, 0);
+
+            const slots = buildSlots(date);
+
+            for (const centre of centres) {
+                for (const slot of slots) {
+                    // ------------------------------------------
+                    // Check whether slot is already booked
+                    // ------------------------------------------
+
+                    const existingBooking =
+                        await Booking.findOne({
+                            procurementCentre: centre._id,
+
+                            slotStart: {
+                                $lt: slot.end,
+                            },
+
+                            slotEnd: {
+                                $gt: slot.start,
+                            },
+                        });
+
+                    if (!existingBooking) {
+                        assigned = true;
+                        assignedCentre = centre;
+                        assignedSlot = slot;
+
+                        break;
+                    }
+                }
+
+                if (assigned) {
+                    break;
+                }
+            }
+        }
+
+        // ------------------------------------------
+        // No slot available
+        // ------------------------------------------
+
+        if (!assigned) {
+            return res.status(201).json({
+                success: true,
+                message:
+                    "Booking created, but no slot is currently available",
+                booking: newBooking,
+                assigned: false,
+            });
+        }
+
+        // ------------------------------------------
+        // Update booking with assigned centre + slot
+        // ------------------------------------------
+
+        newBooking.procurementCentre = assignedCentre._id;
+        newBooking.slotStart = assignedSlot.start;
+        newBooking.slotEnd = assignedSlot.end;
+        newBooking.status = "Scheduled";
+
+        await newBooking.save();
+
+        // ------------------------------------------
+        // Success response
+        // ------------------------------------------
+
+        return res.status(201).json({
+            success: true,
+            message: "Booking created and slot assigned successfully",
+            assigned: true,
+
+            booking: newBooking,
+
+            procurementCentre: assignedCentre,
+            
+            slot: {
+                start: assignedSlot.start,
+                end: assignedSlot.end,
+            },
+        });
+    } catch (error) {
+        console.error("Create Booking Error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Server error while creating booking",
+            error: error.message,
+        });
+    }
 };
 
 // ======================================================
