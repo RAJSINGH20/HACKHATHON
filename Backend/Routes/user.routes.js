@@ -1,5 +1,5 @@
 import express, { Router } from "express"
-import { farmerRegistration, adminRegistration, govtRegistration, adminLogin, farmerLogin, govtLogin, getAllFarmers, getAdminProfile, updateAdminProfile, getFarmerProfile, verifyFarmerQr, updateFarmerProfile, getGovtProfile, updateGovtProfile } from "../Controller/user.controller.js"
+import { farmerRegistration, adminRegistration, govtRegistration, adminLogin, farmerLogin, govtLogin, getAllFarmers, getAllGovt, getAdminProfile, updateAdminProfile, getFarmerProfile, verifyFarmerQr, updateFarmerProfile, getGovtProfile, updateGovtProfile } from "../Controller/user.controller.js"
 
 const app = Router()
 
@@ -17,5 +17,6 @@ app.post("/govt_login", govtLogin)
 app.get("/govt/:id", getGovtProfile)
 app.put("/govt/:id", updateGovtProfile)
 app.get("/get_farmer/:id", getAllFarmers)
+app.get("/get_govt", getAllGovt)
 
 export default app

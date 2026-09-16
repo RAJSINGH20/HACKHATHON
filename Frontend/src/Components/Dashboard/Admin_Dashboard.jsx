@@ -4,7 +4,7 @@ import axios from "axios";
 import {
   Phone, Mail, MapPin, Menu, ArrowLeft,
   ShieldCheck, User, Landmark, Users, ClipboardList,
-  Wheat, FileCheck2, BarChart3, Bell,
+  FileCheck2, BarChart3,
 } from "lucide-react";
 
 
@@ -53,7 +53,8 @@ const CONTROLLERS = [
 ];
 
 const ADMIN_AADHAAR_PHONE = "7384302670";
-const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/aadhaar/check`;
+const BACKEND_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API_URL = `${BACKEND_URL}/api/aadhaar/check`;
 
 // ---- Controller pages ------------------------------------------------------
 
@@ -210,83 +211,120 @@ const AdminControlPage = ({ onBack }) => {
   );
 };
 
-const FarmerControlPage = ({ onBack }) => (
-  <div className="min-h-screen bg-stone-50">
-    <ControllerHeader
-      title="Farmer Control"
-      subtitle="Your slots, requests, and farm profile"
-      icon={Users}
-      onBack={onBack}
-    />
-    <div className="max-w-6xl mx-auto px-6 py-10">
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-10">
-        <StatCard label="Upcoming slots" value="2" icon={ClipboardList} />
-        <StatCard label="Completed services" value="6" icon={FileCheck2} />
-        <StatCard label="Farm land (acres)" value="4.5" icon={Wheat} />
-      </div>
-      <div className="bg-white rounded-xl border border-stone-200 p-6 mb-6">
-        <h3 className="font-serif text-lg text-green-900 mb-4">Your bookings</h3>
-        <div className="divide-y divide-stone-100">
-          {[
-            { service: "Soil testing", date: "12 Sep 2026", status: "Confirmed" },
-            { service: "Irrigation support", date: "20 Sep 2026", status: "Pending" },
-          ].map((row, i) => (
-            <div key={i} className="flex items-center justify-between py-3 text-sm">
-              <span className="text-stone-700">{row.service}</span>
-              <span className="text-stone-500">{row.date}</span>
-              <span
-                className={
-                  row.status === "Pending"
-                    ? "text-amber-600 font-semibold"
-                    : "text-green-700 font-semibold"
-                }
-              >
-                {row.status}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-      <button className="bg-green-700 hover:bg-green-800 text-white px-6 py-3 rounded-md text-sm font-semibold">
-        Book a new slot
-      </button>
-    </div>
+const DataMessage = ({ children, retry }) => (
+  <div className="rounded-xl border border-stone-200 bg-stone-50 p-6 text-sm text-stone-600">
+    <p>{children}</p>
+    {retry && <button onClick={retry} className="mt-3 font-semibold text-green-700 hover:underline">Try again</button>}
   </div>
 );
 
-const GovtControlPage = ({ onBack }) => (
-  <div className="min-h-screen bg-stone-50">
-    <ControllerHeader
-      title="Govt Control"
-      subtitle="Scheme rollout, reports, and camp approvals"
-      icon={Landmark}
-      onBack={onBack}
-    />
-    <div className="max-w-6xl mx-auto px-6 py-10">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-        <StatCard label="Active schemes" value="5" icon={FileCheck2} />
-        <StatCard label="Camps awaiting approval" value="4" icon={Bell} />
-        <StatCard label="Blocks covered" value="18" icon={Landmark} />
-        <StatCard label="Reports this quarter" value="22" icon={BarChart3} />
-      </div>
-      <div className="bg-white rounded-xl border border-stone-200 p-6">
-        <h3 className="font-serif text-lg text-green-900 mb-4">Camps awaiting approval</h3>
-        <div className="divide-y divide-stone-100">
-          {[
-            { location: "Sector 12, Durgapur block", type: "Soil testing camp" },
-            { location: "Rampur village", type: "Equipment demo" },
-          ].map((row, i) => (
-            <div key={i} className="flex items-center justify-between py-3 text-sm">
-              <span className="text-stone-700">{row.location}</span>
-              <span className="text-stone-500">{row.type}</span>
-              <button className="text-green-700 font-semibold hover:underline">Review</button>
+const FarmerControlPage = ({ onBack }) => {
+  const [farmers, setFarmers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadFarmers = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const { data } = await axios.get(`${BACKEND_URL}/api/auth/get_farmer/all`);
+      setFarmers(data.farmers || []);
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || "Could not load farmer records.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadFarmers();
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-stone-50">
+      <ControllerHeader title="Farmer Control" subtitle="Live farmer registrations and profiles" icon={Users} onBack={onBack} />
+      <div className="max-w-6xl mx-auto px-6 py-10">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-10">
+          <StatCard label="Registered farmers" value={farmers.length} icon={Users} />
+          <StatCard label="Districts covered" value={new Set(farmers.map((farmer) => farmer.district)).size} icon={MapPin} />
+          <StatCard label="States covered" value={new Set(farmers.map((farmer) => farmer.state)).size} icon={Landmark} />
+        </div>
+        <div className="bg-white rounded-xl border border-stone-200 p-6">
+          <h3 className="font-serif text-lg text-green-900 mb-4">Registered farmers</h3>
+          {loading && <DataMessage>Loading farmer records...</DataMessage>}
+          {!loading && error && <DataMessage retry={loadFarmers}>{error}</DataMessage>}
+          {!loading && !error && farmers.length === 0 && <DataMessage>No farmer records found.</DataMessage>}
+          {!loading && !error && farmers.length > 0 && (
+            <div className="divide-y divide-stone-100">
+              {farmers.map((farmer) => (
+                <div key={farmer._id} className="grid gap-2 py-4 text-sm md:grid-cols-4 md:items-center">
+                  <span className="font-semibold text-stone-800">{farmer.name}</span>
+                  <span className="text-stone-500">{farmer.mobile}</span>
+                  <span className="text-stone-500">{farmer.village}, {farmer.district}</span>
+                  <span className="text-stone-500">{farmer.state}</span>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
+
+const GovtControlPage = ({ onBack }) => {
+  const [governmentUsers, setGovernmentUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadGovernmentUsers = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const { data } = await axios.get(`${BACKEND_URL}/api/auth/get_govt`);
+      setGovernmentUsers(data.governmentUsers || []);
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || "Could not load government records.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadGovernmentUsers();
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-stone-50">
+      <ControllerHeader title="Govt Control" subtitle="Live government registrations and offices" icon={Landmark} onBack={onBack} />
+      <div className="max-w-6xl mx-auto px-6 py-10">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-10">
+          <StatCard label="Government users" value={governmentUsers.length} icon={Users} />
+          <StatCard label="Departments" value={new Set(governmentUsers.map((user) => user.department)).size} icon={FileCheck2} />
+          <StatCard label="Offices" value={new Set(governmentUsers.map((user) => user.office)).size} icon={Landmark} />
+        </div>
+        <div className="bg-white rounded-xl border border-stone-200 p-6">
+          <h3 className="font-serif text-lg text-green-900 mb-4">Registered government users</h3>
+          {loading && <DataMessage>Loading government records...</DataMessage>}
+          {!loading && error && <DataMessage retry={loadGovernmentUsers}>{error}</DataMessage>}
+          {!loading && !error && governmentUsers.length === 0 && <DataMessage>No government records found.</DataMessage>}
+          {!loading && !error && governmentUsers.length > 0 && (
+            <div className="divide-y divide-stone-100">
+              {governmentUsers.map((user) => (
+                <div key={user._id} className="grid gap-2 py-4 text-sm md:grid-cols-4 md:items-center">
+                  <span className="font-semibold text-stone-800">{user.name}</span>
+                  <span className="text-stone-500">{user.email}</span>
+                  <span className="text-stone-500">{user.department}</span>
+                  <span className="text-stone-500">{user.office}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ---- Main dashboard --------------------------------------------------------
 

@@ -642,7 +642,7 @@ export const updateGovtProfile = async (req, res) => {
 
 export const getAllFarmers = async (req, res) => {
     try {
-        const farmers = await Farmer.find();
+        const farmers = await Farmer.find().select("-password").sort({ createdAt: -1 });
         return res.status(200).json({
             success: true,
             message: "Farmers retrieved successfully",
@@ -650,6 +650,26 @@ export const getAllFarmers = async (req, res) => {
         });
     } catch (error) {
         console.error("ERROR RETRIEVING FARMERS:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Server error",
+        });
+    }
+};
+
+export const getAllGovt = async (req, res) => {
+    try {
+        const governmentUsers = await Govt.find()
+            .select("-password")
+            .sort({ createdAt: -1 });
+
+        return res.status(200).json({
+            success: true,
+            message: "Government users retrieved successfully",
+            governmentUsers,
+        });
+    } catch (error) {
+        console.error("ERROR RETRIEVING GOVERNMENT USERS:", error);
         return res.status(500).json({
             success: false,
             message: "Server error",
