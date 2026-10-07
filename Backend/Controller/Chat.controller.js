@@ -1,17 +1,9 @@
-import dotenv from "dotenv";
-dotenv.config({ path: new URL("../.env", import.meta.url) });
 import axios from "axios";
 import OpenAI from "openai";
 
 const GROQ_API_KEY =
-    process.env.GROQ_API_KEY || process.env.OPENROUTER_API_KEY;
-
-console.log("Groq Key Loaded:", !!GROQ_API_KEY);
-
-const client = new OpenAI({
-    baseURL: "https://api.groq.com/openai/v1",
-    apiKey: GROQ_API_KEY,
-});
+    process.env.GROQ_API_KEY?.trim() || process.env.OPENROUTER_API_KEY?.trim();
+let client;
 
 const BOOKINGS_API_URL =
     `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`}/api/bookings/getBookings`;
@@ -30,6 +22,18 @@ const isBookingRelatedQuery = (message) => {
 const hasGroqKey = () =>
     typeof GROQ_API_KEY === "string" &&
     GROQ_API_KEY.startsWith("gsk_");
+
+const getGroqClient = () => {
+    if (!hasGroqKey()) {
+        return null;
+    }
+
+    client ??= new OpenAI({
+        baseURL: "https://api.groq.com/openai/v1",
+        apiKey: GROQ_API_KEY,
+    });
+    return client;
+};
 
 const parseBookingDetails = (message) => {
     const match = message.match(
@@ -180,7 +184,7 @@ IMPORTANT RULES:
             { role: "user", content: message },
         ];
 
-        const response = await client.chat.completions.create({
+        const response = await getGroqClient().chat.completions.create({
             model: "openai/gpt-oss-20b",
             messages,
             temperature: 0.2,
@@ -364,7 +368,7 @@ Current user authentication status: ${isAuthenticated ? "LOGGED IN" : "NOT LOGGE
             { role: "user", content: message },
         ];
 
-        const completion = await client.chat.completions.create({
+        const completion = await getGroqClient().chat.completions.create({
             model: "openai/gpt-oss-20b",
             messages,
             max_tokens: 700,
