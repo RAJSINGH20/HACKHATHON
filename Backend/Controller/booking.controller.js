@@ -6,6 +6,7 @@
 import Booking from "../models/Booking.js";
 import Procurement from "../models/procument.model.js";
 import { Farmer } from "../models/farmer.model.js";
+import mongoose from "mongoose";
 import aadhaarRecords from "../AddharDummy/AddharDummy.json" with { type: "json" };
 
 // ======================================================
@@ -470,8 +471,31 @@ export const getBookings = async (
     res
 ) => {
     try {
-        const { farmerId } = req.query;
-        const filter = farmerId ? { farmerId } : {};
+        const { farmerId, farmerMobile } = req.query;
+        const normalizedMobile =
+            typeof farmerMobile === "string"
+                ? farmerMobile.trim()
+                : "";
+        const filter = {};
+
+        if (farmerId && !mongoose.isValidObjectId(farmerId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid farmer ID",
+            });
+        }
+
+        if (farmerId && normalizedMobile) {
+            filter.$or = [
+                { farmerId },
+                { phone: normalizedMobile },
+            ];
+        } else if (farmerId) {
+            filter.farmerId = farmerId;
+        } else if (normalizedMobile) {
+            filter.phone = normalizedMobile;
+        }
+
         const bookings =
             await Booking.find(filter)
                 .sort({

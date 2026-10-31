@@ -39,7 +39,10 @@ const FarmerLogin = () => {
 
       navigate("/farmer-dashboard");
     } catch (err) {
-      console.error("Farmer Login Error:", err);
+      console.error(
+        "Farmer login failed:",
+        err.response?.status || err.message
+      );
 
       setError(
         err.response?.data?.message ||

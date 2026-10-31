@@ -1,14 +1,17 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
   ArrowLeft,
+  AlertCircle,
+  CheckCircle2,
+  LoaderCircle,
   User,
   Phone,
   Wheat,
   Scale,
-  CheckCircle2,
 } from "lucide-react";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 const VITE_API_URL =
   import.meta.env.VITE_API_URL || "http://localhost:3000";
@@ -36,11 +39,13 @@ const readImageAsDataUrl = (file) =>
 
 const BookingPage = () => {
   const navigate = useNavigate();
+  const { users } = useAuth();
+  const farmerMobile = users.farmer?.mobile || "";
 
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
-    phone: "",
+    phone: farmerMobile,
     product: PRODUCTS[0],
     weight: "",
   });
@@ -49,6 +54,60 @@ const BookingPage = () => {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [imageCheck, setImageCheck] = useState({ status: "idle" });
+  const [checkAttempt, setCheckAttempt] = useState(0);
+
+  useEffect(() => {
+    if (!image) {
+      return undefined;
+    }
+
+    let active = true;
+    const product = form.product;
+
+    const verifyImage = async () => {
+      try {
+        const { classifyCropImage } = await import("./cropImageClassifier");
+        if (!active) return;
+
+        const result = await classifyCropImage(image, product);
+        if (active) {
+          setImageCheck({
+            ...result,
+            image,
+            product,
+            status: result.matches
+              ? "match"
+              : result.uncertain
+                ? "uncertain"
+                : "mismatch",
+          });
+        }
+      } catch (error) {
+        if (active) {
+          setImageCheck({
+            image,
+            product,
+            status: "error",
+            message:
+              error.message || "The crop image could not be verified.",
+          });
+        }
+      }
+    };
+
+    void verifyImage();
+
+    return () => {
+      active = false;
+    };
+  }, [image, form.product, checkAttempt]);
+
+  const currentImageCheck =
+    imageCheck.image === image && imageCheck.product === form.product
+      ? imageCheck
+      : { status: image ? "checking" : "idle" };
+  const imageVerified = currentImageCheck.status === "match";
 
   const updateField = (field, value) => {
     setForm((f) => ({
@@ -88,6 +147,8 @@ const BookingPage = () => {
 
     if (!image) {
       e.image = "Select an image to submit with your booking";
+    } else if (!imageVerified) {
+      e.image = "Verify that the product image matches the selected crop";
     }
 
     setErrors(e);
@@ -99,6 +160,10 @@ const BookingPage = () => {
     event.preventDefault();
 
     if (!validate()) {
+      return;
+    }
+
+    if (!imageVerified) {
       return;
     }
 
@@ -285,8 +350,9 @@ const BookingPage = () => {
                     errors.phone
                       ? "border-red-400"
                       : "border-stone-300"
-                  }`}
+                  } ${farmerMobile ? "read-only:bg-stone-50 read-only:text-stone-500" : ""}`}
                   value={form.phone}
+                  readOnly={Boolean(farmerMobile)}
                   onChange={(e) =>
                     updateField(
                       "phone",
@@ -296,6 +362,13 @@ const BookingPage = () => {
                   placeholder="9876543210"
                 />
               </div>
+
+              {farmerMobile && (
+                <span className="text-xs font-normal text-stone-500">
+                  Using your registered account number so this booking appears
+                  on your dashboard.
+                </span>
+              )}
 
               {errors.phone && (
                 <span className="text-xs text-red-600">
@@ -420,6 +493,70 @@ const BookingPage = () => {
                 {errors.image && (
                   <span className="text-xs text-red-600">{errors.image}</span>
                 )}
+                {currentImageCheck.status === "checking" && (
+                  <span
+                    className="flex items-center gap-2 text-xs font-normal text-amber-700"
+                    role="status"
+                  >
+                    <LoaderCircle size={14} className="animate-spin" />
+                    Checking the crop image with local AI. The first check
+                    downloads the model; image analysis runs in your browser.
+                  </span>
+                )}
+                {currentImageCheck.status === "match" && (
+                  <span
+                    className="flex items-center gap-2 text-xs font-normal text-green-700"
+                    role="status"
+                  >
+                    <CheckCircle2 size={14} />
+                    Image verified: it appears to match {form.product}.
+                  </span>
+                )}
+                {currentImageCheck.status === "mismatch" && (
+                  <span
+                    className="flex items-center gap-2 text-xs font-normal text-red-600"
+                    role="alert"
+                  >
+                    <AlertCircle size={14} />
+                    Selected {form.product}, but the image appears to show{" "}
+                    {currentImageCheck.detectedCrop}. Upload a matching image.
+                  </span>
+                )}
+                {currentImageCheck.status === "uncertain" && (
+                  <span
+                    className="flex items-center gap-2 text-xs font-normal text-amber-700"
+                    role="alert"
+                  >
+                    <AlertCircle size={14} />
+                    AI could not confidently identify this image. Upload a
+                    clearer photo of {form.product}.
+                  </span>
+                )}
+                {currentImageCheck.status === "error" && (
+                  <span
+                    className="flex flex-col gap-2 text-xs font-normal text-red-600"
+                    role="alert"
+                  >
+                    <span>
+                      Crop image verification failed:{" "}
+                      {currentImageCheck.message}
+                    </span>
+                    <button
+                      type="button"
+                      className="self-start font-semibold underline"
+                      onClick={() => {
+                        setImageCheck({
+                          status: "checking",
+                          image,
+                          product: form.product,
+                        });
+                        setCheckAttempt((attempt) => attempt + 1);
+                      }}
+                    >
+                      Try verification again
+                    </button>
+                  </span>
+                )}
               </label>
             </div>
 
@@ -433,10 +570,14 @@ const BookingPage = () => {
             {/* Submit */}
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || !imageVerified}
               className="w-full bg-green-700 hover:bg-green-800 disabled:opacity-60 text-white px-6 py-3 rounded-lg text-sm font-semibold shadow-md"
             >
-              {submitting ? "Submitting..." : "Confirm booking"}
+              {submitting
+                ? "Submitting..."
+                : currentImageCheck.status === "checking"
+                  ? "Verifying image..."
+                  : "Confirm booking"}
             </button>
           </form>
         </div>

@@ -44,7 +44,10 @@ const AdminLogin = () => {
 
       navigate("/admin-dashboard");
     } catch (err) {
-      console.error("Error occurred while logging in admin:", err);
+      console.error(
+        "Admin login failed:",
+        err.response?.status || err.message
+      );
       setError(
         err.response?.data?.message || "Login failed. Please check your credentials."
       );

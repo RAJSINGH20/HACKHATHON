@@ -316,8 +316,6 @@ export const adminRegistration = async (req, res) => {
 export const adminLogin = async (req, res) => {
 
     const { email, password } = req.body;
-    console.log(email, password);
-
     if (!email || !password) {
         return res.status(400).json({
             success: false,
@@ -529,7 +527,6 @@ export const govtRegistration = async (req, res) => {
 export const govtLogin = async (req, res) => {
 
     const { email, password } = req.body;
-    console.log(email, ",", password)
 
     if (!email || !password) {
         return res.status(400).json({
@@ -540,6 +537,13 @@ export const govtLogin = async (req, res) => {
 
     const govt = await Govt.findOne({ email });
 
+    if (!govt) {
+        return res.status(404).json({
+            success: false,
+            message: "Government account not found",
+        });
+    }
+
     const isPasswordValid = await bcrypt.compare(password, govt.password);
 
     if (!isPasswordValid) {
@@ -549,12 +553,6 @@ export const govtLogin = async (req, res) => {
         });
     }
 
-    if (!govt) {
-        return res.status(404).json({
-            success: false,
-            message: "Government account not found",
-        });
-    }
     return res.status(200).json({
         success: true,
         message: "Government account logged in successfully",
@@ -676,4 +674,3 @@ export const getAllGovt = async (req, res) => {
         });
     }
 };
-

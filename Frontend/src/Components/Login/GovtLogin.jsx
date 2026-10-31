@@ -44,7 +44,10 @@ const GovtLogin = () => {
 
       navigate("/government-dashboard");
     } catch (err) {
-      console.error("Error occurred while logging in government user:", err);
+      console.error(
+        "Government login failed:",
+        err.response?.status || err.message
+      );
       setError(
         err.response?.data?.message || "Login failed. Please check your credentials."
       );

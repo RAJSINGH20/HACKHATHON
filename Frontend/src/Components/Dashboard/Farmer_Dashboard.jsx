@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { QRCodeSVG } from "qrcode.react";
@@ -428,6 +428,8 @@ const PendingBookingQr = ({ booking, farmer }) => {
 const Farmer_Dashboard = () => {
   const navigate = useNavigate();
   const { users } = useAuth();
+  const farmerMobile = users.farmer?.mobile || "";
+  const farmerMobileSuffix = farmerMobile.slice(-4);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeService, setActiveService] = useState(null);
@@ -459,7 +461,18 @@ const Farmer_Dashboard = () => {
   // FETCH FARMER BOOKINGS
   // ====================================================
 
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
+    const farmer = users.farmer;
+    const farmerId = farmer?.id || farmer?._id;
+    const farmerMobile = farmer?.mobile;
+
+    if (!farmerId && !farmerMobile) {
+      setBookings([]);
+      setError("Unable to identify your farmer account. Please log in again.");
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError("");
@@ -467,6 +480,7 @@ const Farmer_Dashboard = () => {
       const response = await axios.get(
         `${API_URL}/api/bookings/getBookings`,
         {
+          params: { farmerId, farmerMobile },
           withCredentials: true,
         }
       );
@@ -501,11 +515,11 @@ const Farmer_Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate, users.farmer]);
 
   useEffect(() => {
     fetchBookings();
-  }, []);
+  }, [fetchBookings]);
 
   // ====================================================
   // AI CHAT
@@ -982,17 +996,28 @@ const Farmer_Dashboard = () => {
                 />
 
                 <p className="text-sm text-stone-500">
-                  You don't have any procurement
-                  booking yet.
+                  No bookings were found for this account
+                  {farmerMobileSuffix
+                    ? ` ending in ${farmerMobileSuffix}`
+                    : ""}
+                  . Bookings made with another mobile number will not appear
+                  here.
                 </p>
 
-                <button
-                  onClick={handleBookingClick}
-                  className="mt-4 bg-green-700 hover:bg-green-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold"
-                >
-                  Book a new slot
-                </button>
-
+                <div className="mt-4 flex flex-wrap justify-center gap-3">
+                  <button
+                    onClick={() => navigate("/FarmerProfile")}
+                    className="rounded-lg border border-green-700 px-5 py-2.5 text-sm font-semibold text-green-800 hover:bg-green-50"
+                  >
+                    Check account details
+                  </button>
+                  <button
+                    onClick={handleBookingClick}
+                    className="rounded-lg bg-green-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-green-800"
+                  >
+                    Book a new slot
+                  </button>
+                </div>
               </div>
             )}
 
