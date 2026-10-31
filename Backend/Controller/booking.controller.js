@@ -8,6 +8,12 @@ import Procurement from "../models/procument.model.js";
 import { Farmer } from "../models/farmer.model.js";
 import mongoose from "mongoose";
 import aadhaarRecords from "../AddharDummy/AddharDummy.json" with { type: "json" };
+import {
+    CropVerificationError,
+    isValidCropImage,
+    SUPPORTED_CROPS,
+    verifyCropVerificationToken,
+} from "../Services/cropVerification.service.js";
 
 // ======================================================
 // CREATE FARMER BOOKING
@@ -23,6 +29,7 @@ export const createBooking = async (req, res) => {
             product,
             weight,
             imageDataUrl,
+            cropVerificationToken,
         } = req.body;
 
         if (
@@ -40,18 +47,56 @@ export const createBooking = async (req, res) => {
             });
         }
 
+        if (!SUPPORTED_CROPS.includes(product)) {
+            return res.status(400).json({
+                success: false,
+                message: "Select one of the supported crops.",
+            });
+        }
+
         const imageMatch = typeof imageDataUrl === "string"
             ? imageDataUrl.match(
                 /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/
             )
             : null;
+        const imageBuffer = imageMatch
+            ? Buffer.from(imageMatch[2], "base64")
+            : null;
+        const imageMimeType = imageMatch
+            ? `image/${imageMatch[1]}`
+            : "";
         if (
-            !imageMatch ||
-            Buffer.from(imageMatch[2], "base64").length > 5 * 1024 * 1024
+            !imageBuffer ||
+            imageBuffer.toString("base64") !== imageMatch[2] ||
+            !isValidCropImage(imageBuffer, imageMimeType)
         ) {
             return res.status(400).json({
                 success: false,
                 message: "Upload a valid JPG, PNG, or WebP image of 5 MB or less",
+            });
+        }
+
+        let isVerified;
+        try {
+            isVerified = verifyCropVerificationToken(
+                cropVerificationToken,
+                imageBuffer,
+                product
+            );
+        } catch (error) {
+            if (error instanceof CropVerificationError) {
+                return res.status(error.statusCode).json({
+                    success: false,
+                    message: error.message,
+                });
+            }
+            throw error;
+        }
+
+        if (!isVerified) {
+            return res.status(400).json({
+                success: false,
+                message: "Verify this crop image again before submitting the booking.",
             });
         }
 
@@ -474,23 +519,28 @@ export const getBookings = async (
         const { farmerId, farmerMobile } = req.query;
         const normalizedMobile =
             typeof farmerMobile === "string"
-                ? farmerMobile.trim()
+                ? farmerMobile.replace(/\D/g, "").slice(-10)
                 : "";
         const filter = {};
+        const hasValidFarmerId =
+            Boolean(farmerId && mongoose.isValidObjectId(farmerId));
 
-        if (farmerId && !mongoose.isValidObjectId(farmerId)) {
+        if (
+            (farmerId && !hasValidFarmerId && !normalizedMobile) ||
+            (farmerMobile && !normalizedMobile && !hasValidFarmerId)
+        ) {
             return res.status(400).json({
                 success: false,
-                message: "Invalid farmer ID",
+                message: "Provide a valid farmer ID or mobile number",
             });
         }
 
-        if (farmerId && normalizedMobile) {
+        if (hasValidFarmerId && normalizedMobile) {
             filter.$or = [
                 { farmerId },
                 { phone: normalizedMobile },
             ];
-        } else if (farmerId) {
+        } else if (hasValidFarmerId) {
             filter.farmerId = farmerId;
         } else if (normalizedMobile) {
             filter.phone = normalizedMobile;

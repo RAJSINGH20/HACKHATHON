@@ -1,5 +1,8 @@
 import axios from "axios";
 import OpenAI from "openai";
+import mongoose from "mongoose";
+import Booking from "../models/Booking.js";
+import { Farmer } from "../models/farmer.model.js";
 
 const GROQ_API_KEY =
     process.env.GROQ_API_KEY?.trim() || process.env.OPENROUTER_API_KEY?.trim();
@@ -225,7 +228,7 @@ IMPORTANT RULES:
 
 export const FamerAIChatController = async (req, res) => {
     try {
-        const { message, farmerId, history } = req.body;
+        const { message, farmerId, farmerMobile, history } = req.body;
 
         if (typeof message !== "string" || !message.trim()) {
             return res.status(400).json({
@@ -237,19 +240,45 @@ export const FamerAIChatController = async (req, res) => {
         const bookingDetails = parseBookingDetails(message.trim());
 
         if (bookingDetails) {
-            const bookingResponse = await axios.post(
-                `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`}/api/bookings/ivr/createBooking`,
-                {
-                    ...bookingDetails,
-                    farmerId: farmerId || null,
-                },
-                { timeout: 10000 }
-            );
+            if (!farmerId || !mongoose.isValidObjectId(farmerId)) {
+                return res.status(401).json({
+                    success: false,
+                    message: "Please log in as a farmer before creating a booking.",
+                });
+            }
+
+            const farmer = await Farmer.findById(farmerId).select("_id mobile");
+            if (!farmer) {
+                return res.status(401).json({
+                    success: false,
+                    message: "Your farmer account could not be found. Please log in again.",
+                });
+            }
+
+            const accountMobile = String(farmer.mobile || "").replace(/\D/g, "").slice(-10);
+            const requestedMobile = bookingDetails.phone.replace(/\D/g, "").slice(-10);
+            if (
+                requestedMobile !== accountMobile ||
+                (farmerMobile &&
+                    String(farmerMobile).replace(/\D/g, "").slice(-10) !== accountMobile)
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Use the mobile number registered to your farmer account to create a booking.",
+                });
+            }
+
+            const booking = await Booking.create({
+                ...bookingDetails,
+                phone: farmer.mobile,
+                farmerId: farmer._id,
+                status: "Pending",
+            });
 
             return res.status(200).json({
                 success: true,
-                answer: `Your booking is confirmed for ${bookingDetails.firstName} ${bookingDetails.lastName}. ${bookingDetails.product}, ${bookingDetails.weight} kg, phone ${bookingDetails.phone}.`,
-                booking: bookingResponse.data.booking,
+                answer: `Your booking has been created and is pending confirmation: ${booking.product}, ${booking.weight} kg.`,
+                booking,
             });
         }
 
@@ -270,15 +299,20 @@ export const FamerAIChatController = async (req, res) => {
             : [];
 
         let bookings = [];
-        try {
-            const bookingResponse = await axios.get(
-                `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`}/api/bookings/getBookings`,
-                { timeout: 5000 }
-            );
-            const data = bookingResponse.data;
-            bookings = Array.isArray(data) ? data : data.bookings || data.data || [];
-        } catch (bookingError) {
-            console.warn("Unable to load booking data for Farmer AI chat:", bookingError.message);
+        if (farmerId || farmerMobile) {
+            try {
+                const bookingResponse = await axios.get(
+                    `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`}/api/bookings/getBookings`,
+                    {
+                        params: { farmerId, farmerMobile },
+                        timeout: 5000,
+                    }
+                );
+                const data = bookingResponse.data;
+                bookings = Array.isArray(data) ? data : data.bookings || data.data || [];
+            } catch (bookingError) {
+                console.warn("Unable to load booking data for Farmer AI chat:", bookingError.message);
+            }
         }
 
         const bookingContext = bookings.slice(0, 20).map((booking) => ({
@@ -293,7 +327,7 @@ export const FamerAIChatController = async (req, res) => {
             slotEnd: booking.assignedSlotEnd,
         }));
 
-        const isAuthenticated = Boolean(farmerId);
+        const isAuthenticated = Boolean(farmerId || farmerMobile);
 
         const systemPrompt = `
 You are "Setu Sahayak" — the official AI assistant for Farmer AI, a platform

@@ -548,6 +548,7 @@ const Farmer_Dashboard = () => {
           message: message,
           history: aiHistory,
           farmerId: users.farmer?.id || users.farmer?._id || null,
+          farmerMobile: users.farmer?.mobile || null,
         },
         {
           headers: {

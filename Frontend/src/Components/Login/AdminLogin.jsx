@@ -38,10 +38,14 @@ const AdminLogin = () => {
         password: e.target.password.value,
       });
 
-      if (res.data?.user) {
-        setAuthenticatedUser("admin", res.data.user);
+      if (
+        !res.data?.user?.id ||
+        res.data.user.role !== "admin"
+      ) {
+        throw new Error("The server did not return a valid admin account.");
       }
 
+      setAuthenticatedUser("admin", res.data.user);
       navigate("/admin-dashboard");
     } catch (err) {
       console.error(
@@ -49,7 +53,9 @@ const AdminLogin = () => {
         err.response?.status || err.message
       );
       setError(
-        err.response?.data?.message || "Login failed. Please check your credentials."
+        err.response?.data?.message ||
+          err.message ||
+          "Login failed. Please check your credentials."
       );
     } finally {
       setLoading(false);

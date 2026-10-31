@@ -116,6 +116,47 @@ const findAvailableSlot = (
   return null;
 };
 
+const getExistingProcurementBookings = async () => {
+  const centres = await Procurement.find({
+    "bookings.0": { $exists: true },
+  }).lean();
+  const bookingIds = [
+    ...new Set(
+      centres
+        .flatMap((centre) =>
+          centre.bookings.map((booking) => booking.bookingId?.toString())
+        )
+        .filter(Boolean)
+    ),
+  ];
+  const existingBookings = await Booking.find({
+    _id: { $in: bookingIds },
+  }).select("_id").lean();
+  const existingBookingIds = new Set(
+    existingBookings.map((booking) => booking._id.toString())
+  );
+  const seenBookingIds = new Set();
+  const records = [];
+
+  for (const centre of centres) {
+    for (const booking of centre.bookings) {
+      const bookingId = booking.bookingId?.toString();
+      if (
+        !bookingId ||
+        !existingBookingIds.has(bookingId) ||
+        seenBookingIds.has(bookingId)
+      ) {
+        continue;
+      }
+
+      seenBookingIds.add(bookingId);
+      records.push({ centre, booking });
+    }
+  }
+
+  return records;
+};
+
 // ======================================================
 // 1. CREATE PROCUREMENT RECORD
 // Called AFTER farmer creates booking
@@ -362,82 +403,32 @@ export const assignProcurementSlot =
 export const getProcurementBookings =
   async (req, res) => {
     try {
-      const centres =
-        await Procurement.find({
-          "bookings.0": {
-            $exists: true,
-          },
-        }).lean();
-
       const bookings = [];
 
-      for (const centre of centres) {
-        for (const booking of centre.bookings) {
-          bookings.push({
-            procurementId:
-              centre._id,
-
-            procurementCenter:
-              centre.officeName,
-
-            address:
-              centre.address,
-
-            contactPhone:
-              centre.contactPhone,
-
-            bookingId:
-              booking.bookingId,
-
-            farmerId:
-              booking.farmerId,
-
-            farmerName:
-              booking.farmerName,
-
-            farmerPhone:
-              booking.farmerPhone,
-
-            product:
-              booking.product,
-
-            offeredQuantity:
-              booking.offeredQuantity,
-
-            verifiedQuantity:
-              booking.verifiedQuantity,
-
-            qualityGrade:
-              booking.qualityGrade,
-
-            ratePerKg:
-              booking.ratePerKg,
-
-            procurementAmount:
-              booking.procurementAmount,
-
-            decision:
-              booking.decision,
-
-            rejectionReason:
-              booking.rejectionReason,
-
-            paymentStatus:
-              booking.paymentStatus,
-
-            slotStart:
-              booking.slotStart,
-
-            slotEnd:
-              booking.slotEnd,
-
-            checkedAt:
-              booking.checkedAt,
-
-            createdAt:
-              booking.createdAt,
-          });
-        }
+      for (const { centre, booking } of await getExistingProcurementBookings()) {
+        bookings.push({
+          procurementId: centre._id,
+          procurementCenter: centre.officeName,
+          address: centre.address,
+          contactPhone: centre.contactPhone,
+          bookingId: booking.bookingId,
+          farmerId: booking.farmerId,
+          farmerName: booking.farmerName,
+          farmerPhone: booking.farmerPhone,
+          product: booking.product,
+          offeredQuantity: booking.offeredQuantity,
+          verifiedQuantity: booking.verifiedQuantity,
+          qualityGrade: booking.qualityGrade,
+          ratePerKg: booking.ratePerKg,
+          procurementAmount: booking.procurementAmount,
+          decision: booking.decision,
+          rejectionReason: booking.rejectionReason,
+          paymentStatus: booking.paymentStatus,
+          slotStart: booking.slotStart,
+          slotEnd: booking.slotEnd,
+          checkedAt: booking.checkedAt,
+          createdAt: booking.createdAt,
+        });
       }
 
       bookings.sort(
@@ -1141,126 +1132,28 @@ export const rejectProcurement =
 export const getProcurementDashboard =
   async (req, res) => {
     try {
-      const result =
-        await Procurement.aggregate([
-          {
-            $unwind:
-              "$bookings",
-          },
+      const records = await getExistingProcurementBookings();
+      const dashboard = records.reduce(
+        (totals, { booking }) => {
+          totals.totalSlots += 1;
 
-          {
-            $group: {
-              _id: null,
+          if (booking.decision === "Pending") {
+            totals.pendingChecks += 1;
+          } else if (booking.decision === "Accepted") {
+            totals.acceptedSlots += 1;
+            totals.acceptedQuantity += Number(booking.verifiedQuantity || 0);
+            totals.procurementAmount += Number(booking.procurementAmount || 0);
 
-              totalSlots: {
-                $sum: 1,
-              },
+            if (booking.paymentStatus === "Paid") {
+              totals.paidAmount += Number(booking.procurementAmount || 0);
+            }
+          } else if (booking.decision === "Rejected") {
+            totals.rejectedSlots += 1;
+          }
 
-              pendingChecks: {
-                $sum: {
-                  $cond: [
-                    {
-                      $eq: [
-                        "$bookings.decision",
-                        "Pending",
-                      ],
-                    },
-                    1,
-                    0,
-                  ],
-                },
-              },
-
-              acceptedSlots: {
-                $sum: {
-                  $cond: [
-                    {
-                      $eq: [
-                        "$bookings.decision",
-                        "Accepted",
-                      ],
-                    },
-                    1,
-                    0,
-                  ],
-                },
-              },
-
-              rejectedSlots: {
-                $sum: {
-                  $cond: [
-                    {
-                      $eq: [
-                        "$bookings.decision",
-                        "Rejected",
-                      ],
-                    },
-                    1,
-                    0,
-                  ],
-                },
-              },
-
-              acceptedQuantity: {
-                $sum: {
-                  $cond: [
-                    {
-                      $eq: [
-                        "$bookings.decision",
-                        "Accepted",
-                      ],
-                    },
-                    "$bookings.verifiedQuantity",
-                    0,
-                  ],
-                },
-              },
-
-              procurementAmount: {
-                $sum: {
-                  $cond: [
-                    {
-                      $eq: [
-                        "$bookings.decision",
-                        "Accepted",
-                      ],
-                    },
-                    "$bookings.procurementAmount",
-                    0,
-                  ],
-                },
-              },
-
-              paidAmount: {
-                $sum: {
-                  $cond: [
-                    {
-                      $and: [
-                        {
-                          $eq: [
-                            "$bookings.decision",
-                            "Accepted",
-                          ],
-                        },
-                        {
-                          $eq: [
-                            "$bookings.paymentStatus",
-                            "Paid",
-                          ],
-                        },
-                      ],
-                    },
-                    "$bookings.procurementAmount",
-                    0,
-                  ],
-                },
-              },
-            },
-          },
-        ]);
-
-      const dashboard =
-        result[0] || {
+          return totals;
+        },
+        {
           totalSlots: 0,
           pendingChecks: 0,
           acceptedSlots: 0,
@@ -1268,7 +1161,8 @@ export const getProcurementDashboard =
           acceptedQuantity: 0,
           procurementAmount: 0,
           paidAmount: 0,
-        };
+        }
+      );
 
       return res.status(200).json({
         success: true,
@@ -1332,60 +1226,31 @@ export const getProcurementStats =
       // ------------------------------------------------
       const registeredFarmers = await Farmer.countDocuments();
 
-      // ------------------------------------------------
-      // Procurement KMS aggregates from all bookings
-      // ------------------------------------------------
-      const kmsAgg = await Procurement.aggregate([
-        { $unwind: "$bookings" },
-        {
-          $group: {
-            _id: null,
-            procuredQuantity: {
-              $sum: {
-                $cond: [
-                  { $eq: ["$bookings.decision", "Accepted"] },
-                  "$bookings.verifiedQuantity",
-                  0,
-                ],
-              },
-            },
-            totalValue: {
-              $sum: {
-                $cond: [
-                  { $eq: ["$bookings.decision", "Accepted"] },
-                  "$bookings.procurementAmount",
-                  0,
-                ],
-              },
-            },
-            farmersBenefitted: {
-              $addToSet: {
-                $cond: [
-                  { $eq: ["$bookings.decision", "Accepted"] },
-                  "$bookings.farmerId",
-                  "$$REMOVE",
-                ],
-              },
-            },
-          },
+      const acceptedBookings = (await getExistingProcurementBookings())
+        .map(({ booking }) => booking)
+        .filter((booking) => booking.decision === "Accepted");
+      const beneficiaryKeys = new Set(
+        acceptedBookings
+          .map((booking) =>
+            booking.farmerId?.toString() || booking.farmerPhone?.trim()
+          )
+          .filter(Boolean)
+      );
+      const kms = acceptedBookings.reduce(
+        (totals, booking) => {
+          totals.procuredQuantity += Number(booking.verifiedQuantity || 0);
+          totals.totalValue += Number(booking.procurementAmount || 0);
+          return totals;
         },
         {
-          $project: {
-            procuredQuantity: 1,
-            totalValue: 1,
-            farmersBenefitted: { $size: "$farmersBenefitted" },
-          },
-        },
-      ]);
+          procuredQuantity: 0,
+          totalValue: 0,
+        }
+      );
 
-      const kms = kmsAgg[0] || {
-        procuredQuantity: 0,
-        totalValue: 0,
-        farmersBenefitted: 0,
-      };
-
-      // Dispatch to rice mill = 90% of accepted quantity (paddy → rice conversion approx)
-      const dispatchToRiceMill = Math.round(kms.procuredQuantity * 0.9);
+      // Procurement quantities are stored in kg; KMS cards display metric tonnes.
+      const procuredQuantityMT = kms.procuredQuantity / 1000;
+      const dispatchToRiceMillMT = procuredQuantityMT * 0.9;
 
       return res.status(200).json({
         success: true,
@@ -1398,10 +1263,10 @@ export const getProcurementStats =
         },
         kms: {
           registeredFarmers,
-          procuredQuantity: kms.procuredQuantity,
+          procuredQuantity: procuredQuantityMT,
           totalValue: kms.totalValue,
-          dispatchToRiceMill,
-          farmersBenefitted: kms.farmersBenefitted,
+          dispatchToRiceMill: dispatchToRiceMillMT,
+          farmersBenefitted: beneficiaryKeys.size,
         },
       });
     } catch (error) {

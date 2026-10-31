@@ -62,6 +62,11 @@ const formatINR = (value = 0) =>
 const formatNumber = (value = 0) =>
   Number(value || 0).toLocaleString("en-IN");
 
+const formatMetricTonnes = (value = 0) =>
+  Number(value || 0).toLocaleString("en-IN", {
+    maximumFractionDigits: 2,
+  });
+
 const formatDate = (value) => {
   if (!value) return "—";
 
@@ -938,10 +943,10 @@ const ControllerPage = ({ onBack }) => {
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               {[
-                { label: "REGISTERED FARMERS", value: formatNumber(stats.kms?.registeredFarmers ?? 0), icon: Users },
-                { label: "PROCURED QUANTITY", value: `${formatNumber(stats.kms?.procuredQuantity ?? 0)} MT`, icon: Wheat },
-                { label: "VALUE OF PROCURED PADDY", value: formatINR(stats.kms?.totalValue ?? 0), icon: IndianRupee },
-                { label: "DISPATCH TO RICE MILL", value: `${formatNumber(stats.kms?.dispatchToRiceMill ?? 0)} MT`, icon: Warehouse },
+                { label: "REGISTERED FARMER ACCOUNTS", value: formatNumber(stats.kms?.registeredFarmers ?? 0), icon: Users },
+                { label: "PROCURED QUANTITY", value: `${formatMetricTonnes(stats.kms?.procuredQuantity ?? 0)} MT`, icon: Wheat },
+                { label: "VALUE OF PROCURED PRODUCE", value: formatINR(stats.kms?.totalValue ?? 0), icon: IndianRupee },
+                { label: "EST. DISPATCH TO RICE MILL", value: `${formatMetricTonnes(stats.kms?.dispatchToRiceMill ?? 0)} MT`, icon: Warehouse },
                 { label: "FARMERS BENEFITTED", value: formatNumber(stats.kms?.farmersBenefitted ?? 0), icon: BadgeCheck },
               ].map((item) => (
                 <div key={item.label} className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
@@ -1197,13 +1202,13 @@ const ControllerPage = ({ onBack }) => {
 
                 {[
                   {
-                    title: "Pending farmers",
+                    title: "Pending bookings",
                     bookings: filteredBookings.filter(
                       (booking) => booking.decision === "Pending"
                     ),
                   },
                   {
-                    title: "Completed farmers",
+                    title: "Completed bookings",
                     bookings: filteredBookings.filter(
                       (booking) => booking.decision !== "Pending"
                     ),
@@ -1215,7 +1220,7 @@ const ControllerPage = ({ onBack }) => {
                         {title}
                       </h4>
                       <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                        {sectionBookings.length} farmer{sectionBookings.length === 1 ? "" : "s"}
+                        {sectionBookings.length} booking{sectionBookings.length === 1 ? "" : "s"}
                       </span>
                     </div>
 

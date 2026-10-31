@@ -1,5 +1,25 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 30, scale: 0.97 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.45, ease: "easeOut" },
+  },
+};
+
+const contentVariants = {
+  hidden: { opacity: 0, y: 14 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: "easeOut", staggerChildren: 0.06 },
+  },
+};
 
 // Generates a unique Farmer AI UID, e.g. FARM-7K2X9P4Q
 const generateUid = () => {
@@ -78,38 +98,72 @@ const FarmerRegister = () => {
 
   return (
     <div className="min-h-screen bg-[#f4f8f1] flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl bg-white rounded-3xl shadow-xl overflow-hidden">
+      <motion.div
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+        className="w-full max-w-2xl bg-white rounded-3xl shadow-xl overflow-hidden"
+      >
         {/* ================= HEADER ================= */}
 
-        <div className="bg-gradient-to-r from-green-50 to-blue-50 p-8 md:p-10">
-          <Link
-            to="/farmer-login"
-            className="text-green-700 font-semibold hover:text-green-900"
-          >
-            ← Back to Login
-          </Link>
+        <motion.div
+          variants={contentVariants}
+          initial="hidden"
+          animate="visible"
+          className="bg-gradient-to-r from-green-50 to-blue-50 p-8 md:p-10"
+        >
+          <motion.div variants={contentVariants}>
+            <Link
+              to="/farmer-login"
+              className="text-green-700 font-semibold hover:text-green-900"
+            >
+              ← Back to Login
+            </Link>
+          </motion.div>
 
           <div className="flex justify-between items-center mt-8">
-            <div>
-              <h1 className="text-4xl font-bold text-green-900">
+            <motion.div variants={contentVariants}>
+              <motion.h1 variants={contentVariants} className="text-4xl font-bold text-green-900">
                 Create Account
-              </h1>
+              </motion.h1>
 
-              <p className="text-gray-600 mt-2">
+              <motion.p variants={contentVariants} className="text-gray-600 mt-2">
                 Register to access Farmer AI procurement services
-              </p>
-            </div>
+              </motion.p>
+            </motion.div>
 
-            <div className="hidden md:block text-7xl">🌾</div>
+            <motion.div
+              initial={{ opacity: 0, rotate: -8, scale: 0.8 }}
+              animate={{ opacity: 1, rotate: 0, scale: 1 }}
+              transition={{ duration: 0.4, delay: 0.2, ease: "easeOut" }}
+              className="hidden md:block text-7xl"
+            >
+              🌾
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
 
         {/* ================= BODY ================= */}
 
         <div className="px-8 md:px-12 py-10">
+          <AnimatePresence mode="wait">
           {submitted ? (
-            <div className="max-w-lg mx-auto text-center">
-              <div className="text-7xl">✅</div>
+            <motion.div
+              key="success"
+              initial={{ opacity: 0, y: 12, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.3 }}
+              className="max-w-lg mx-auto text-center"
+            >
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 240, damping: 16 }}
+                className="text-7xl"
+              >
+                ✅
+              </motion.div>
 
               <h2 className="text-3xl font-bold text-green-800 mt-5">
                 Registration Complete!
@@ -130,15 +184,24 @@ const FarmerRegister = () => {
                 Keep this UID safe — you'll need it along with your password to log in.
               </p>
 
-              <Link
-                to="/farmer-login"
-                className="inline-block mt-8 bg-green-700 hover:bg-green-800 text-white px-10 py-4 rounded-xl font-semibold"
-              >
-                Go to Login
-              </Link>
-            </div>
+              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                <Link
+                  to="/farmer-login"
+                  className="inline-block mt-8 bg-green-700 hover:bg-green-800 text-white px-10 py-4 rounded-xl font-semibold"
+                >
+                  Go to Login
+                </Link>
+              </motion.div>
+            </motion.div>
           ) : (
-            <div className="max-w-lg mx-auto">
+            <motion.div
+              key="form"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.3 }}
+              className="max-w-lg mx-auto"
+            >
               <h2 className="text-2xl font-bold text-green-800">
                 Account Details
               </h2>
@@ -287,8 +350,9 @@ const FarmerRegister = () => {
                   Register
                 </button>
               </form>
-            </div>
+            </motion.div>
           )}
+          </AnimatePresence>
         </div>
 
         {/* ================= FOOTER ================= */}
@@ -308,7 +372,7 @@ const FarmerRegister = () => {
 
           <div className="hidden md:block text-4xl">🚜 🌳 🌾</div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

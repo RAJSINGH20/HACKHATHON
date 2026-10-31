@@ -144,17 +144,29 @@ function App() {
 
       <Route
         path="/AdminProfile"
-        element={<AdminProfile/>}
+        element={
+          <ProtectedRoute role="admin">
+            <AdminProfile />
+          </ProtectedRoute>
+        }
       />
 
       <Route
         path="/FarmerProfile"
-        element={<Farmer_profile/>}
+        element={
+          <ProtectedRoute role="farmer">
+            <Farmer_profile />
+          </ProtectedRoute>
+        }
       />
 
       <Route
         path="/GovtPRofile"
-        element={<Govt_profile/>}
+        element={
+          <ProtectedRoute role="govt">
+            <Govt_profile />
+          </ProtectedRoute>
+        }
       />
 
       <Route/>
@@ -163,4 +175,3 @@ function App() {
 }
 
 export default App;
-

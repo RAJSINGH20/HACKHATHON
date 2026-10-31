@@ -38,10 +38,14 @@ const GovtLogin = () => {
         password: e.target.password.value,
       });
 
-      if (res.data?.user) {
-        setAuthenticatedUser("govt", res.data.user);
+      if (
+        !res.data?.user?.id ||
+        res.data.user.role !== "government"
+      ) {
+        throw new Error("The server did not return a valid government account.");
       }
 
+      setAuthenticatedUser("govt", res.data.user);
       navigate("/government-dashboard");
     } catch (err) {
       console.error(
@@ -49,7 +53,9 @@ const GovtLogin = () => {
         err.response?.status || err.message
       );
       setError(
-        err.response?.data?.message || "Login failed. Please check your credentials."
+        err.response?.data?.message ||
+          err.message ||
+          "Login failed. Please check your credentials."
       );
     } finally {
       setLoading(false);

@@ -1,9 +1,25 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext.jsx";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 28, scale: 0.97 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.45, ease: "easeOut", when: "beforeChildren", staggerChildren: 0.08 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
+};
 
 const FarmerLogin = () => {
   const [loading, setLoading] = useState(false);
@@ -33,10 +49,14 @@ const FarmerLogin = () => {
         }
       );
 
-      if (res.data?.user) {
-        setAuthenticatedUser("farmer", res.data.user);
+      if (
+        !res.data?.user?.id ||
+        res.data.user.role !== "farmer"
+      ) {
+        throw new Error("The server did not return a valid farmer account.");
       }
 
+      setAuthenticatedUser("farmer", res.data.user);
       navigate("/farmer-dashboard");
     } catch (err) {
       console.error(
@@ -46,6 +66,7 @@ const FarmerLogin = () => {
 
       setError(
         err.response?.data?.message ||
+          err.message ||
           "Login failed. Please check your credentials."
       );
     } finally {
@@ -55,36 +76,47 @@ const FarmerLogin = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-blue-50 to-cyan-50 px-4">
-      <div className="w-full max-w-md bg-white/90 backdrop-blur-md p-8 rounded-3xl shadow-xl border border-green-100">
+      <motion.div
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+        className="w-full max-w-md bg-white/90 backdrop-blur-md p-8 rounded-3xl shadow-xl border border-green-100"
+      >
 
-        <div className="flex justify-center mb-5">
+        <motion.div variants={itemVariants} className="flex justify-center mb-5">
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-400 to-blue-400 flex items-center justify-center shadow-md">
             <span className="text-3xl">🌾</span>
           </div>
-        </div>
+        </motion.div>
 
-        <h1 className="text-3xl font-bold text-center text-green-700">
+        <motion.h1 variants={itemVariants} className="text-3xl font-bold text-center text-green-700">
           Farmer Login
-        </h1>
+        </motion.h1>
 
-        <p className="text-center text-gray-500 mt-2">
+        <motion.p variants={itemVariants} className="text-center text-gray-500 mt-2">
           Welcome to Farmer AI
-        </p>
+        </motion.p>
 
-        <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+        <motion.form variants={itemVariants} className="mt-8 space-y-5" onSubmit={handleSubmit}>
 
           {error && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"
+              role="alert"
+            >
               {error}
-            </div>
+            </motion.div>
           )}
 
-          <div>
+          <motion.div variants={itemVariants}>
             <label className="block mb-2 text-sm font-semibold text-gray-700">
               Mobile Number
             </label>
 
-            <input
+            <motion.input
+              whileFocus={{ scale: 1.01 }}
               type="tel"
               name="mobile"
               required
@@ -93,40 +125,44 @@ const FarmerLogin = () => {
               placeholder="Enter mobile number"
               className="w-full px-4 py-3 rounded-xl border border-blue-200 bg-blue-50/40 outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100 transition"
             />
-          </div>
+          </motion.div>
 
-          <div>
+          <motion.div variants={itemVariants}>
             <label className="block mb-2 text-sm font-semibold text-gray-700">
               Password
             </label>
 
-            <input
+            <motion.input
+              whileFocus={{ scale: 1.01 }}
               type="password"
               name="password"
               required
               placeholder="Enter password"
               className="w-full px-4 py-3 rounded-xl border border-blue-200 bg-blue-50/40 outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100 transition"
             />
-          </div>
+          </motion.div>
 
-          <div className="text-right">
+          <motion.div variants={itemVariants} className="text-right">
             <button
               type="button"
               className="text-sm text-blue-600 hover:text-green-600 transition"
             >
               Forgot Password?
             </button>
-          </div>
+          </motion.div>
 
-          <button
+          <motion.button
+            variants={itemVariants}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             type="submit"
             disabled={loading}
             className="w-full py-3 rounded-xl bg-gradient-to-r from-green-500 to-blue-500 text-white font-semibold shadow-md hover:shadow-lg hover:from-green-600 hover:to-blue-600 transition duration-300 disabled:opacity-60"
           >
             {loading ? "Logging in..." : "Login"}
-          </button>
+          </motion.button>
 
-          <div className="text-center pt-1">
+          <motion.div variants={itemVariants} className="text-center pt-1">
             <span className="text-sm text-gray-500">
               Don't have an account?{" "}
             </span>
@@ -137,10 +173,10 @@ const FarmerLogin = () => {
             >
               Register
             </Link>
-          </div>
-        </form>
+          </motion.div>
+        </motion.form>
 
-        <div className="mt-6 text-center">
+        <motion.div variants={itemVariants} className="mt-6 text-center">
           <p className="text-sm text-gray-500">
             Not comfortable using the website?
           </p>
@@ -151,12 +187,12 @@ const FarmerLogin = () => {
           >
             📞 Call Toll-Free for Assistance
           </button>
-        </div>
+        </motion.div>
 
-        <p className="text-center text-sm text-gray-400 mt-6">
+        <motion.p variants={itemVariants} className="text-center text-sm text-gray-400 mt-6">
           🌱 Farmer AI • Empowering Farmers
-        </p>
-      </div>
+        </motion.p>
+      </motion.div>
     </div>
   );
 };

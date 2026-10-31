@@ -16,6 +16,7 @@ import { useAuth } from "../../context/AuthContext.jsx";
 const VITE_API_URL =
   import.meta.env.VITE_API_URL || "http://localhost:3000";
 const CREATE_BOOKING_URL = `${VITE_API_URL}/api/bookings/createBooking`;
+const VERIFY_CROP_URL = `${VITE_API_URL}/api/bookings/verify-crop`;
 
 const PRODUCTS = [
   "Wheat",
@@ -67,20 +68,17 @@ const BookingPage = () => {
 
     const verifyImage = async () => {
       try {
-        const { classifyCropImage } = await import("./cropImageClassifier");
-        if (!active) return;
-
-        const result = await classifyCropImage(image, product);
+        const upload = new FormData();
+        upload.append("selectedCrop", product);
+        upload.append("image", image);
+        const { data } = await axios.post(VERIFY_CROP_URL, upload, {
+          timeout: 120000,
+        });
         if (active) {
           setImageCheck({
-            ...result,
+            ...data,
             image,
             product,
-            status: result.matches
-              ? "match"
-              : result.uncertain
-                ? "uncertain"
-                : "mismatch",
           });
         }
       } catch (error) {
@@ -90,7 +88,9 @@ const BookingPage = () => {
             product,
             status: "error",
             message:
-              error.message || "The crop image could not be verified.",
+              error.response?.data?.message ||
+              error.message ||
+              "The crop image could not be verified.",
           });
         }
       }
@@ -107,7 +107,9 @@ const BookingPage = () => {
     imageCheck.image === image && imageCheck.product === form.product
       ? imageCheck
       : { status: image ? "checking" : "idle" };
-  const imageVerified = currentImageCheck.status === "match";
+  const imageVerified =
+    currentImageCheck.status === "verified" &&
+    Boolean(currentImageCheck.verificationToken);
 
   const updateField = (field, value) => {
     setForm((f) => ({
@@ -148,7 +150,7 @@ const BookingPage = () => {
     if (!image) {
       e.image = "Select an image to submit with your booking";
     } else if (!imageVerified) {
-      e.image = "Verify that the product image matches the selected crop";
+      e.image = "Verify that the uploaded image matches the selected crop";
     }
 
     setErrors(e);
@@ -176,6 +178,7 @@ const BookingPage = () => {
         {
           ...form,
           imageDataUrl,
+          cropVerificationToken: currentImageCheck.verificationToken,
         },
         {
           withCredentials: true
@@ -499,27 +502,31 @@ const BookingPage = () => {
                     role="status"
                   >
                     <LoaderCircle size={14} className="animate-spin" />
-                    Checking the crop image with local AI. The first check
-                    downloads the model; image analysis runs in your browser.
+                    Vision AI is checking the image on the server. This may
+                    take a short while.
                   </span>
                 )}
-                {currentImageCheck.status === "match" && (
+                {currentImageCheck.status === "verified" && (
                   <span
                     className="flex items-center gap-2 text-xs font-normal text-green-700"
                     role="status"
                   >
                     <CheckCircle2 size={14} />
-                    Image verified: it appears to match {form.product}.
+                    Image verified as {currentImageCheck.detectedCrop} (
+                    {Math.round(currentImageCheck.confidence * 100)}% confidence).
+                    {currentImageCheck.reason}
                   </span>
                 )}
-                {currentImageCheck.status === "mismatch" && (
+                {currentImageCheck.status === "rejected" && (
                   <span
                     className="flex items-center gap-2 text-xs font-normal text-red-600"
                     role="alert"
                   >
                     <AlertCircle size={14} />
-                    Selected {form.product}, but the image appears to show{" "}
-                    {currentImageCheck.detectedCrop}. Upload a matching image.
+                    {currentImageCheck.detectedCrop === "unknown"
+                      ? "No supported crop was clearly identified."
+                      : `Selected ${form.product}, but the image appears to show ${currentImageCheck.detectedCrop}.`}{" "}
+                    {currentImageCheck.reason} Upload another image.
                   </span>
                 )}
                 {currentImageCheck.status === "uncertain" && (
@@ -529,7 +536,8 @@ const BookingPage = () => {
                   >
                     <AlertCircle size={14} />
                     AI could not confidently identify this image. Upload a
-                    clearer photo of {form.product}.
+                    clearer photo of {form.product}.{" "}
+                    {currentImageCheck.reason}
                   </span>
                 )}
                 {currentImageCheck.status === "error" && (

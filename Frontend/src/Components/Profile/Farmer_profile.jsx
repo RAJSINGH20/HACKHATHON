@@ -78,55 +78,126 @@ const Farmer_profile = () => {
   };
 
   if (loading) {
-    return <div className="min-h-screen bg-stone-50 p-8 text-stone-600">Loading profile...</div>;
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-green-50 via-stone-50 to-emerald-100 px-4 py-10 sm:px-6">
+        <section className="mx-auto max-w-4xl animate-pulse rounded-3xl border border-white/80 bg-white p-6 shadow-xl shadow-green-950/5 sm:p-10">
+          <div className="h-4 w-32 rounded bg-stone-200" />
+          <div className="mt-3 h-9 w-48 rounded bg-stone-200" />
+          <div className="mt-3 h-4 w-72 max-w-full rounded bg-stone-100" />
+          <div className="mt-10 grid gap-6 sm:grid-cols-2">
+            {fields.map(([name]) => (
+              <div key={name}>
+                <div className="h-4 w-24 rounded bg-stone-200" />
+                <div className="mt-3 h-14 rounded-xl bg-stone-100" />
+              </div>
+            ))}
+          </div>
+        </section>
+      </main>
+    );
   }
 
   if (!profile) {
-    return <div className="min-h-screen bg-stone-50 p-8 text-red-700">{message.text}</div>;
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-50 via-stone-50 to-emerald-100 px-4 py-10">
+        <section
+          role="alert"
+          className="w-full max-w-lg rounded-3xl border border-red-100 bg-white p-8 text-center shadow-xl shadow-red-950/5"
+        >
+          <p className="text-sm font-semibold uppercase tracking-wide text-red-600">
+            Profile unavailable
+          </p>
+          <p className="mt-2 text-stone-600">{message.text}</p>
+          <button
+            type="button"
+            onClick={() => navigate("/farmer-dashboard")}
+            className="mt-6 rounded-xl bg-green-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-200"
+          >
+            Back to dashboard
+          </button>
+        </section>
+      </main>
+    );
   }
 
   return (
-    <main className="min-h-screen bg-stone-50 px-4 py-10 text-stone-800">
-      <section className="mx-auto max-w-2xl rounded-2xl bg-white p-6 shadow-lg sm:p-8">
-        <div className="mb-8 flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold text-green-700">Farmer account</p>
-            <h1 className="mt-1 font-serif text-3xl text-green-950">My Profile</h1>
-            <p className="mt-2 text-sm text-stone-500">Your details are loaded from the database.</p>
-          </div>
-          <button type="button" onClick={() => navigate("/farmer-dashboard")} className="text-sm font-semibold text-green-700 hover:underline">
-            Dashboard
-          </button>
-        </div>
-
-        {message.text && (
-          <p className={`mb-4 rounded-lg px-4 py-3 text-sm ${message.type === "error" ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
-            {message.text}
-          </p>
-        )}
-
-        <form onSubmit={handleSubmit} className="grid gap-5 sm:grid-cols-2">
-          {fields.map(([name, label, type]) => (
-            <label key={name} className="text-sm font-semibold text-stone-700">
-              {label}
-              <input
-                type={type}
-                name={name}
-                value={form[name] || ""}
-                onChange={handleChange}
-                required
-                className="mt-2 w-full rounded-lg border border-stone-300 px-4 py-3 font-normal outline-none focus:border-green-600 focus:ring-2 focus:ring-green-100"
-              />
-            </label>
-          ))}
-
-          <div className="flex items-center justify-between border-t border-stone-200 pt-5 sm:col-span-2">
-            <span className="text-sm text-stone-500">Role: {profile.role}</span>
-            <button type="submit" disabled={saving} className="rounded-lg bg-green-700 px-5 py-3 text-sm font-semibold text-white hover:bg-green-800 disabled:opacity-60">
-              {saving ? "Saving..." : "Save changes"}
+    <main className="min-h-screen bg-gradient-to-br from-green-50 via-stone-50 to-emerald-100 px-4 py-8 text-stone-800 sm:px-6 sm:py-12">
+      <section className="mx-auto max-w-4xl overflow-hidden rounded-3xl border border-white/80 bg-white shadow-2xl shadow-green-950/10">
+        <div className="border-b border-green-100 bg-gradient-to-r from-green-50 via-white to-emerald-50 px-6 py-7 sm:px-10 sm:py-9">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="hidden h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-green-700 text-2xl text-white shadow-lg shadow-green-900/20 sm:flex">
+                🌾
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-green-700">
+                  Farmer account
+                </p>
+                <h1 className="mt-1 font-serif text-3xl font-semibold tracking-tight text-green-950 sm:text-4xl">
+                  My Profile
+                </h1>
+                <p className="mt-2 text-sm leading-6 text-stone-600">
+                  Review and update your registered account details.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate("/farmer-dashboard")}
+              className="shrink-0 rounded-xl border border-green-200 bg-white px-3 py-2 text-sm font-semibold text-green-800 shadow-sm transition hover:border-green-300 hover:bg-green-50 focus:outline-none focus:ring-4 focus:ring-green-100 sm:px-4"
+            >
+              Dashboard
             </button>
           </div>
-        </form>
+        </div>
+
+        <div className="px-6 py-7 sm:px-10 sm:py-9">
+          {message.text && (
+            <p
+              role="status"
+              className={`mb-6 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium ${
+                message.type === "error"
+                  ? "border-red-200 bg-red-50 text-red-700"
+                  : "border-green-200 bg-green-50 text-green-800"
+              }`}
+            >
+              <span aria-hidden="true">{message.type === "error" ? "!" : "✓"}</span>
+              {message.text}
+            </p>
+          )}
+
+          <form onSubmit={handleSubmit}>
+            <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
+              {fields.map(([name, label, type]) => (
+                <label key={name} className="block text-sm font-semibold text-stone-700">
+                  {label}
+                  <input
+                    type={type}
+                    name={name}
+                    value={form[name] || ""}
+                    onChange={handleChange}
+                    required
+                    className="mt-2 w-full rounded-xl border border-stone-200 bg-stone-50/70 px-4 py-3.5 text-base font-normal text-stone-800 outline-none transition placeholder:text-stone-400 hover:border-stone-300 focus:border-green-600 focus:bg-white focus:ring-4 focus:ring-green-100"
+                  />
+                </label>
+              ))}
+            </div>
+
+            <div className="mt-8 flex flex-col-reverse gap-4 border-t border-stone-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
+              <span className="inline-flex w-fit items-center gap-2 rounded-full bg-green-50 px-3 py-1.5 text-sm font-medium capitalize text-green-800">
+                <span className="h-2 w-2 rounded-full bg-green-600" />
+                {profile.role}
+              </span>
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex min-w-40 items-center justify-center rounded-xl bg-green-700 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-green-900/15 transition hover:-translate-y-0.5 hover:bg-green-800 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-green-200 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+              >
+                {saving ? "Saving..." : "Save changes"}
+              </button>
+            </div>
+          </form>
+        </div>
       </section>
     </main>
   );
