@@ -5,6 +5,7 @@
 
 import Booking from "../models/Booking.js";
 import Procurement from "../models/procument.model.js";
+import { Farmer } from "../models/farmer.model.js";
 import aadhaarRecords from "../AddharDummy/AddharDummy.json" with { type: "json" };
 
 // ======================================================
@@ -20,22 +21,36 @@ export const createBooking = async (req, res) => {
             phone,
             product,
             weight,
-            farmerId,
+            imageDataUrl,
         } = req.body;
-
-        console.log(firstName, lastName, phone, product, weight, farmerId)
 
         if (
             !firstName ||
             !lastName ||
             !phone ||
             !product ||
-            !weight
+            !weight ||
+            !imageDataUrl
         ) {
             return res.status(400).json({
                 success: false,
                 message:
-                    "All fields are required",
+                    "All fields, including a product image, are required",
+            });
+        }
+
+        const imageMatch = typeof imageDataUrl === "string"
+            ? imageDataUrl.match(
+                /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/
+            )
+            : null;
+        if (
+            !imageMatch ||
+            Buffer.from(imageMatch[2], "base64").length > 5 * 1024 * 1024
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Upload a valid JPG, PNG, or WebP image of 5 MB or less",
             });
         }
 
@@ -43,14 +58,16 @@ export const createBooking = async (req, res) => {
         // Create booking
         // ------------------------------------------
 
+        const farmer = await Farmer.findOne({ mobile: phone }).select("_id");
         const newBooking =
             await Booking.create({
+                farmerId: farmer?._id || null,
                 firstName,
                 lastName,
                 phone,
                 product,
                 weight: Number(weight),
-                farmerId: farmerId || null,
+                imageDataUrl,
                 status: "Pending",
             });
 
@@ -71,7 +88,15 @@ export const createBooking = async (req, res) => {
                 success: true,
                 message:
                     "Booking created, but no procurement centre is currently available",
-                booking: newBooking,
+                booking: {
+                    id: newBooking._id,
+                    firstName: newBooking.firstName,
+                    lastName: newBooking.lastName,
+                    phone: newBooking.phone,
+                    product: newBooking.product,
+                    weight: newBooking.weight,
+                    status: newBooking.status,
+                },
                 assigned: false,
             });
         }
@@ -230,7 +255,7 @@ export const createBooking = async (req, res) => {
                 newBooking._id,
 
             farmerId:
-                farmerId || null,
+                newBooking.farmerId || null,
 
             farmerName:
                 `${firstName} ${lastName}`,
@@ -364,8 +389,6 @@ export const createBooking = async (req, res) => {
 // CREATE BOOKING FROM IVR (Exotel Passthru)
 // POST /api/bookings/ivr/createBooking
 // ======================================================
-
-import { Farmer } from "../models/farmer.model.js"; // add this import at the top of the file
 
 const PRODUCT_MAP = {
     "1": "Wheat",

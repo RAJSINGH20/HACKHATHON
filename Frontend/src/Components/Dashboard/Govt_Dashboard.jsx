@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   Clock3,
   Menu,
+  X,
   ArrowLeft,
   BadgeCheck,
   Users,
@@ -211,6 +212,7 @@ const DetailRow = ({ label, value }) => (
 
 const ControllerPage = ({ onBack }) => {
   const [bookings, setBookings] = useState([]);
+  const bookingsRef = useRef(bookings);
   const [dashboard, setDashboard] = useState(null);
   const [stats, setStats] = useState(null);
 
@@ -227,18 +229,25 @@ const ControllerPage = ({ onBack }) => {
 
   const [submitting, setSubmitting] = useState({});
 
-  const [qrTarget, setQrTarget] = useState(null);
   const [qrInput, setQrInput] = useState("");
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState("");
+  const [qrSuccess, setQrSuccess] = useState("");
   const [verifiedFarmers, setVerifiedFarmers] = useState({});
   const [verifiedQrData, setVerifiedQrData] = useState({});
   const scannerBusy = useRef(false);
+  const verifiedBookingIds = useRef(new Set());
   const scannerRef = useRef(null);
   const scannerRunningRef = useRef(false);
   const [cameraActive, setCameraActive] = useState(false);
 
   const verifyFarmerQr = async (rawValue) => {
+    if (scannerBusy.current) return;
+
+    scannerBusy.current = true;
+    setQrError("");
+    setQrSuccess("");
+
     try {
       const payload = JSON.parse(rawValue);
 
@@ -250,36 +259,54 @@ const ControllerPage = ({ onBack }) => {
         throw new Error("This is not a valid Fasal Setu farmer QR code.");
       }
 
+      const currentBooking = bookingsRef.current.find(
+        (booking) => String(booking.bookingId) === String(payload.bookingId)
+      );
+
+      if (!currentBooking) {
+        throw new Error("No procurement booking matches this QR code.");
+      }
+
+      if (verifiedBookingIds.current.has(String(currentBooking.bookingId))) {
+        setQrError("");
+        setQrSuccess(`${currentBooking.farmerName} is already verified for this booking.`);
+        return;
+      }
+
       setQrLoading(true);
       setQrError("");
+      setQrSuccess("");
 
       const { data } = await axios.get(
         `${API_URL}/api/auth/farmer/verify/${payload.farmerId}`
       );
 
       const { farmer } = data;
-      const matchesBooking =
-        String(qrTarget?.bookingId || "") === String(payload.bookingId) &&
-        (String(qrTarget?.farmerId || "") === String(farmer._id) ||
-          qrTarget?.farmerPhone === farmer.mobile);
+      const targetFarmerId = currentBooking.farmerId?.toString();
+      const bookingPhone = String(currentBooking.farmerPhone || "").replace(/\D/g, "");
+      const verifiedPhone = String(farmer.mobile || "").replace(/\D/g, "");
+      const matchesFarmer =
+        targetFarmerId === String(farmer._id) ||
+        (bookingPhone && verifiedPhone && bookingPhone === verifiedPhone);
 
-      if (!matchesBooking) {
-        throw new Error("This QR code does not match the selected booking.");
+      if (!matchesFarmer) {
+        throw new Error("The QR farmer does not match this booking.");
       }
 
       setVerifiedFarmers((current) => ({
         ...current,
-        [qrTarget.bookingId]: farmer,
+        [currentBooking.bookingId]: farmer,
       }));
       setVerifiedQrData((current) => ({
         ...current,
-        [qrTarget.bookingId]: {
+        [currentBooking.bookingId]: {
           ...payload,
           farmer,
         },
       }));
-      setQrTarget(null);
+      verifiedBookingIds.current.add(String(currentBooking.bookingId));
       setQrInput("");
+      setQrSuccess(`${farmer.name} verified for ${currentBooking.product} booking.`);
     } catch (error) {
       setQrError(
         error.response?.data?.message ||
@@ -308,65 +335,61 @@ const ControllerPage = ({ onBack }) => {
       scannerRef.current = null;
       scannerRunningRef.current = false;
       setCameraActive(false);
-      scannerBusy.current = false;
     }
   };
 
   const startQrScanner = async () => {
-    if (cameraActive || qrLoading) return;
+    if (scannerRef.current || cameraActive || qrLoading) return;
+
+    const scanner = new Html5Qrcode("farmer-qr-reader");
+    scannerRef.current = scanner;
 
     try {
       setQrError("");
-      const cameras = await Html5Qrcode.getCameras();
-
-      if (!cameras.length) {
-        throw new Error("No camera was found on this device.");
-      }
-
-      const camera = cameras.find((item) => /back|rear|environment/i.test(item.label)) || cameras[0];
-      const scanner = new Html5Qrcode("farmer-qr-reader");
-      scannerRef.current = scanner;
 
       await scanner.start(
-        camera.id,
+        { facingMode: "environment" },
         {
           fps: 10,
           qrbox: { width: 220, height: 220 },
           aspectRatio: 1,
         },
         async (decodedText) => {
-          if (scannerBusy.current) return;
-
-          scannerBusy.current = true;
-          await stopQrScanner();
           await verifyFarmerQr(decodedText);
         },
         () => {}
       );
 
+      scannerRunningRef.current = true;
       setCameraActive(true);
     } catch (error) {
       scannerRef.current = null;
       scannerRunningRef.current = false;
       setCameraActive(false);
+
+      try {
+        scanner.clear();
+      } catch (cleanupError) {
+        console.warn("Unable to clear QR scanner after startup failure:", cleanupError);
+      }
+
+      const message = String(error.message || error);
+      const lowerMessage = message.toLowerCase();
       setQrError(
-        error.message?.toLowerCase().includes("permission")
+        lowerMessage.includes("permission") || lowerMessage.includes("notallowederror")
           ? "Camera permission was denied. Allow camera access in your browser settings and try again."
-          : error.message || "Unable to open the camera."
+          : lowerMessage.includes("notfounderror") || lowerMessage.includes("requested device not found")
+            ? "No usable camera was found. Connect or enable a camera, then try again."
+            : message || "Unable to open the camera."
       );
     }
-      scannerRunningRef.current = true;
   };
 
   useEffect(() => {
-    if (!qrTarget) {
-      stopQrScanner();
-    }
-
     return () => {
       stopQrScanner();
     };
-  }, [qrTarget]);
+  }, []);
 
   // ====================================================
   // FETCH ALL PROCUREMENT DATA
@@ -397,9 +420,9 @@ const ControllerPage = ({ onBack }) => {
           ),
         ]);
 
-      setBookings(
-        bookingResponse.data?.bookings || []
-      );
+      const procurementBookings = bookingResponse.data?.bookings || [];
+      bookingsRef.current = procurementBookings;
+      setBookings(procurementBookings);
 
       setDashboard(
         dashboardResponse.data?.dashboard || null
@@ -1031,28 +1054,17 @@ const ControllerPage = ({ onBack }) => {
           </div>
         )}
 
-        {qrTarget && (
-          <div className="mb-10 rounded-2xl border border-blue-200 bg-blue-50 p-5">
+        <section className="mb-10 rounded-2xl border border-blue-200 bg-blue-50 p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 text-blue-950">
                   <ScanLine size={20} />
-                  <h2 className="font-serif text-xl">Verify farmer before starting work</h2>
+                  <h2 className="font-serif text-xl">Farmer QR scanner</h2>
                 </div>
                 <p className="mt-1 text-sm text-slate-600">
-                  Scan the QR shown by {qrTarget.farmerName}, or paste its QR value below.
+                  Open the camera once, then scan any farmer booking QR. The scanner stays active and automatically verifies each matching booking.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setQrTarget(null);
-                  setQrError("");
-                }}
-                className="text-sm font-semibold text-blue-800 hover:underline"
-              >
-                Cancel
-              </button>
             </div>
 
             <div className="mt-5 grid gap-5 lg:grid-cols-[280px_1fr]">
@@ -1103,10 +1115,10 @@ const ControllerPage = ({ onBack }) => {
                   {qrLoading ? "Verifying..." : "Verify QR"}
                 </button>
                 {qrError && <p className="mt-3 text-sm text-red-700">{qrError}</p>}
+                {qrSuccess && <p className="mt-3 text-sm font-medium text-green-700">{qrSuccess}</p>}
               </div>
             </div>
-          </div>
-        )}
+        </section>
 
         {/* PROCUREMENT SLOTS */}
         <div className="bg-white rounded-xl border border-slate-200 p-6 mb-10">
@@ -1357,19 +1369,6 @@ const ControllerPage = ({ onBack }) => {
                                   booking.decision
                                 }
                               />
-
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setQrTarget(booking);
-                                  setQrError("");
-                                  setQrInput("");
-                                }}
-                                className="inline-flex items-center gap-2 border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-900 hover:bg-blue-50 rounded-md"
-                              >
-                                <QrCode size={15} />
-                                {verifiedFarmer ? "View farmer" : "Scan farmer QR"}
-                              </button>
 
                               <button
                                 onClick={() =>

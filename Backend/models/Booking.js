@@ -34,6 +34,11 @@ const bookingSchema = new mongoose.Schema(
             ],
         },
 
+        imageDataUrl: {
+            type: String,
+            default: "",
+        },
+
         product: {
             type: String,
             required: true,

@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useAuth } from "../../context/AuthContext.jsx";
 import {
   ArrowLeft,
   User,
@@ -24,9 +23,19 @@ const PRODUCTS = [
   "Cotton",
 ];
 
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+const readImageAsDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("Could not read the selected image."));
+    reader.readAsDataURL(file);
+  });
+
 const BookingPage = () => {
   const navigate = useNavigate();
-  const { users } = useAuth();
 
   const [form, setForm] = useState({
     firstName: "",
@@ -36,6 +45,7 @@ const BookingPage = () => {
     weight: "",
   });
 
+  const [image, setImage] = useState(null);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -76,6 +86,10 @@ const BookingPage = () => {
       e.weight = "Enter a valid weight";
     }
 
+    if (!image) {
+      e.image = "Select an image to submit with your booking";
+    }
+
     setErrors(e);
 
     return Object.keys(e).length === 0;
@@ -91,11 +105,12 @@ const BookingPage = () => {
     setSubmitting(true);
 
     try {
+      const imageDataUrl = await readImageAsDataUrl(image);
       const { data } = await axios.post(
         CREATE_BOOKING_URL,
         {
           ...form,
-          farmerId: users.farmer?.id || users.farmer?._id || null,
+          imageDataUrl,
         },
         {
           withCredentials: true
@@ -352,6 +367,58 @@ const BookingPage = () => {
                   <span className="text-xs text-red-600">
                     {errors.weight}
                   </span>
+                )}
+              </label>
+              <label className="flex flex-col gap-1.5 text-sm font-semibold text-stone-600 sm:col-span-2">
+                Product image
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className={`pl-3 pr-3 py-2.5 w-full rounded-lg border text-base bg-white text-stone-800 focus:outline-none focus:border-green-600 ${
+                    errors.image ? "border-red-400" : "border-stone-300"
+                  }`}
+                  onChange={(event) => {
+                    const selectedImage = event.target.files?.[0] || null;
+                    setImage(null);
+                    setErrors((current) => ({
+                      ...current,
+                      image: undefined,
+                      submit: undefined,
+                    }));
+
+                    if (!selectedImage) return;
+
+                    if (!ALLOWED_IMAGE_TYPES.includes(selectedImage.type)) {
+                      setErrors((current) => ({
+                        ...current,
+                        image: "Choose a JPG, PNG, or WebP image",
+                      }));
+                      event.target.value = "";
+                      return;
+                    }
+
+                    if (selectedImage.size > MAX_IMAGE_SIZE) {
+                      setErrors((current) => ({
+                        ...current,
+                        image: "Image must be 5 MB or smaller",
+                      }));
+                      event.target.value = "";
+                      return;
+                    }
+
+                    setImage(selectedImage);
+                  }}
+                />
+                <span className="text-xs font-normal text-stone-500">
+                  Upload one JPG, PNG, or WebP image (maximum 5 MB).
+                </span>
+                {image && (
+                  <span className="text-xs font-normal text-stone-600">
+                    Selected: {image.name}
+                  </span>
+                )}
+                {errors.image && (
+                  <span className="text-xs text-red-600">{errors.image}</span>
                 )}
               </label>
             </div>

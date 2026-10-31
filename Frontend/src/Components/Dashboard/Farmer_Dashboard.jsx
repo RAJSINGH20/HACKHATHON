@@ -175,6 +175,10 @@ const formatTime = (value) => {
 const normalizeBooking = (booking) => ({
   id: booking._id || booking.id,
 
+  farmerId: booking.farmerId?._id || booking.farmerId || null,
+
+  imageDataUrl: booking.imageDataUrl || null,
+
   name:
     booking.name ||
     booking.farmerName ||
@@ -378,11 +382,13 @@ const DetailRow = ({ label, value }) =>
   ) : null;
 
 const PendingBookingQr = ({ booking, farmer }) => {
-  const qrValue = farmer?.id && booking?.id
+  const farmerId =
+    booking.farmerId || farmer?.id || farmer?._id;
+  const qrValue = farmerId && booking?.id
     ? JSON.stringify({
         type: "fasal-setu-farmer-booking",
         bookingId: booking.id,
-        farmerId: farmer.id,
+        farmerId,
         farmerName: booking.name,
         farmerPhone: booking.phone,
         product: booking.product,
@@ -1021,6 +1027,14 @@ const Farmer_Dashboard = () => {
 
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
 
+                      {booking.imageDataUrl && (
+                        <img
+                          src={booking.imageDataUrl}
+                          alt={`${booking.product || "Product"} booking`}
+                          className="h-24 w-full rounded-lg object-cover md:h-20 md:w-28"
+                        />
+                      )}
+
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-5 flex-1">
 
                         <div>
@@ -1358,6 +1372,14 @@ const Farmer_Dashboard = () => {
           </div>
 
           <div className="bg-stone-50 rounded-xl px-4 py-3">
+
+            {selectedBooking.imageDataUrl && (
+              <img
+                src={selectedBooking.imageDataUrl}
+                alt={`${selectedBooking.product || "Product"} booking`}
+                className="mb-4 max-h-72 w-full rounded-xl object-contain bg-white"
+              />
+            )}
 
             <DetailRow
               label="Farmer"
