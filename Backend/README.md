@@ -35,11 +35,11 @@ CROP_VERIFICATION_TIMEOUT_MS=90000
 CROP_VERIFICATION_SECRET=replace_with_a_random_secret_at_least_32_characters_long
 ```
 
-Ollama crop verification is intended for a non-Render backend. Render sets
-`RENDER=true`; on Render, the verification endpoint returns `503` without
-connecting to Ollama, regardless of `OLLAMA_BASE_URL`. Since booking creation
-requires a successful verification token, bookings cannot be submitted through
-a Render-hosted backend while this protection is enabled.
+On Render, configure `OLLAMA_BASE_URL` to an HTTP(S) URL for a remote Ollama
+service reachable by the backend, along with the vision model and signing
+secret above. Render cannot use an Ollama service running on the backend's
+localhost; crop verification returns `503` unless a remote endpoint is
+configured. The backend still fails closed if the remote service is unavailable.
 
 Generate a signing secret with:
 

@@ -201,8 +201,9 @@ test("fails closed when Ollama cannot be reached", async () => {
   );
 });
 
-test("does not connect to Ollama on Render", async () => {
+test("does not connect to Ollama on Render without a remote endpoint", async () => {
   const previousRender = process.env.RENDER;
+  const previousOllamaBaseUrl = process.env.OLLAMA_BASE_URL;
   process.env.RENDER = "true";
   let called = false;
   const client = {
@@ -217,20 +218,79 @@ test("does not connect to Ollama on Render", async () => {
   };
 
   try {
-    await assert.rejects(
-      classifyCropImage(makeImage(), "Wheat", { client }),
-      {
-        code: "VISION_MODEL_DISABLED",
-        statusCode: 503,
-        message: "Ollama crop verification is disabled on Render.",
+    for (const ollamaBaseUrl of [
+      undefined,
+      "http://localhost:11434",
+      "http://127.0.0.2:11434",
+      "http://0.0.0.0:11434",
+    ]) {
+      if (ollamaBaseUrl === undefined) {
+        delete process.env.OLLAMA_BASE_URL;
+      } else {
+        process.env.OLLAMA_BASE_URL = ollamaBaseUrl;
       }
-    );
+
+      await assert.rejects(
+        classifyCropImage(makeImage(), "Wheat", { client }),
+        {
+          code: "VISION_MODEL_DISABLED",
+          statusCode: 503,
+          message:
+            "Ollama crop verification on Render requires OLLAMA_BASE_URL to point to a remote Ollama service.",
+        }
+      );
+    }
     assert.equal(called, false);
   } finally {
     if (previousRender === undefined) {
       delete process.env.RENDER;
     } else {
       process.env.RENDER = previousRender;
+    }
+    if (previousOllamaBaseUrl === undefined) {
+      delete process.env.OLLAMA_BASE_URL;
+    } else {
+      process.env.OLLAMA_BASE_URL = previousOllamaBaseUrl;
+    }
+  }
+});
+
+test("allows a configured remote Ollama endpoint on Render", async () => {
+  const previousRender = process.env.RENDER;
+  const previousOllamaBaseUrl = process.env.OLLAMA_BASE_URL;
+  process.env.RENDER = "true";
+  process.env.OLLAMA_BASE_URL = "https://ollama.example.com";
+  const client = {
+    async show() {
+      return { capabilities: ["completion", "vision"] };
+    },
+    async chat() {
+      return {
+        message: {
+          content: JSON.stringify({
+            is_crop: true,
+            detected_crop: "Wheat",
+            confidence: 0.91,
+            reason: "Wheat grains are visible.",
+          }),
+        },
+      };
+    },
+  };
+
+  try {
+    const result = await classifyCropImage(makeImage(), "Wheat", { client });
+    assert.equal(result.status, "verified");
+  } finally {
+    if (previousRender === undefined) {
+      delete process.env.RENDER;
+    } else {
+      process.env.RENDER = previousRender;
+    }
+    if (previousOllamaBaseUrl === undefined) {
+      delete process.env.OLLAMA_BASE_URL;
+    } else {
+      process.env.OLLAMA_BASE_URL = previousOllamaBaseUrl;
     }
   }
 });

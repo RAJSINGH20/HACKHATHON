@@ -1,4 +1,5 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { isIP } from "node:net";
 import { Ollama } from "ollama";
 
 export const SUPPORTED_CROPS = [
@@ -79,6 +80,30 @@ const ollama = new Ollama({
 });
 const visionModel = process.env.OLLAMA_VISION_MODEL || "qwen2.5vl:7b";
 const visionChecks = new WeakMap();
+
+const hasRemoteOllamaUrl = () => {
+  if (!process.env.OLLAMA_BASE_URL) return false;
+
+  try {
+    const url = new URL(process.env.OLLAMA_BASE_URL);
+    const hostname = url.hostname.replace(/^\[|\]$/g, "").toLowerCase();
+    const isLoopback =
+      hostname === "localhost" ||
+      hostname.endsWith(".localhost") ||
+      hostname === "0.0.0.0" ||
+      hostname === "::" ||
+      hostname === "::1" ||
+      (isIP(hostname) === 4 && Number(hostname.split(".")[0]) === 127);
+
+    return (
+      ["http:", "https:"].includes(url.protocol) &&
+      hostname.length > 0 &&
+      !isLoopback
+    );
+  } catch {
+    return false;
+  }
+};
 
 export const isValidCropImage = (buffer, mimeType) => {
   if (!Buffer.isBuffer(buffer) || buffer.length === 0 || buffer.length > MAX_IMAGE_SIZE) {
@@ -231,9 +256,12 @@ export const classifyCropImage = async (
     );
   }
 
-  if (process.env.RENDER?.toLowerCase() === "true") {
+  if (
+    process.env.RENDER?.toLowerCase() === "true" &&
+    !hasRemoteOllamaUrl()
+  ) {
     throw new CropVerificationError(
-      "Ollama crop verification is disabled on Render.",
+      "Ollama crop verification on Render requires OLLAMA_BASE_URL to point to a remote Ollama service.",
       503,
       "VISION_MODEL_DISABLED"
     );
