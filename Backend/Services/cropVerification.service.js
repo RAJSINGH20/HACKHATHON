@@ -231,6 +231,14 @@ export const classifyCropImage = async (
     );
   }
 
+  if (process.env.RENDER?.toLowerCase() === "true") {
+    throw new CropVerificationError(
+      "Ollama crop verification is disabled on Render.",
+      503,
+      "VISION_MODEL_DISABLED"
+    );
+  }
+
   await ensureVisionModel(client);
 
   let response;

@@ -201,6 +201,40 @@ test("fails closed when Ollama cannot be reached", async () => {
   );
 });
 
+test("does not connect to Ollama on Render", async () => {
+  const previousRender = process.env.RENDER;
+  process.env.RENDER = "true";
+  let called = false;
+  const client = {
+    async show() {
+      called = true;
+      return { capabilities: ["completion", "vision"] };
+    },
+    async chat() {
+      called = true;
+      return {};
+    },
+  };
+
+  try {
+    await assert.rejects(
+      classifyCropImage(makeImage(), "Wheat", { client }),
+      {
+        code: "VISION_MODEL_DISABLED",
+        statusCode: 503,
+        message: "Ollama crop verification is disabled on Render.",
+      }
+    );
+    assert.equal(called, false);
+  } finally {
+    if (previousRender === undefined) {
+      delete process.env.RENDER;
+    } else {
+      process.env.RENDER = previousRender;
+    }
+  }
+});
+
 test("reports when the configured Ollama model is not installed", async () => {
   const client = {
     async show() {
