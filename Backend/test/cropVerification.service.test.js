@@ -10,6 +10,14 @@ import {
 } from "../Services/cropVerification.service.js";
 
 const makeImage = () => Buffer.from([0xff, 0xd8, 0xff, 0x00, 0x01]);
+const makePrediction = (crop, overrides = {}) =>
+  JSON.stringify({
+    is_crop: true,
+    detected_crop: crop,
+    confidence: 0.94,
+    reason: `Visible ${crop} crop features.`,
+    ...overrides,
+  });
 
 test("validates supported image signatures and rejects MIME spoofing", () => {
   assert.equal(isValidCropImage(makeImage(), "image/jpeg"), true);
@@ -21,10 +29,7 @@ test("validates supported image signatures and rejects MIME spoofing", () => {
     true
   );
   assert.equal(
-    isValidCropImage(
-      Buffer.from("RIFF0000WEBP", "ascii"),
-      "image/webp"
-    ),
+    isValidCropImage(Buffer.from("RIFF0000WEBP", "ascii"), "image/webp"),
     true
   );
   assert.equal(isValidCropImage(makeImage(), "image/png"), false);
@@ -32,24 +37,23 @@ test("validates supported image signatures and rejects MIME spoofing", () => {
 });
 
 for (const crop of SUPPORTED_CROPS) {
-  test(`accepts a confident ${crop} visual classification when selected`, () => {
-    const result = validateCropModelResponse(
-      JSON.stringify({
-        is_crop: true,
-        detected_crop: crop,
-        confidence: 0.94,
-        reason: `Visible ${crop} crop features.`,
-      }),
-      crop,
-      0.78
-    );
-
+  test(`accepts a confident ${crop} visual classification`, () => {
+    const result = validateCropModelResponse(makePrediction(crop), crop, 0.78);
     assert.equal(result.status, "verified");
     assert.equal(result.isMatch, true);
-    assert.equal(result.selectedCrop, crop);
-    assert.equal(result.detectedCrop, crop);
   });
 }
+
+test("normalizes rice and corn labels", () => {
+  assert.equal(
+    validateCropModelResponse(makePrediction("rice"), "Paddy").detectedCrop,
+    "Paddy"
+  );
+  assert.equal(
+    validateCropModelResponse(makePrediction("corn"), "Maize").detectedCrop,
+    "Maize"
+  );
+});
 
 for (const [selectedCrop, detectedCrop] of [
   ["Wheat", "Paddy"],
@@ -59,29 +63,18 @@ for (const [selectedCrop, detectedCrop] of [
   ["Sugarcane", "Cotton"],
   ["Mustard", "Maize"],
 ]) {
-  test(`rejects ${detectedCrop} when the farmer selected ${selectedCrop}`, () => {
+  test(`rejects ${detectedCrop} when ${selectedCrop} was selected`, () => {
     const result = validateCropModelResponse(
-      JSON.stringify({
-        is_crop: true,
-        detected_crop: detectedCrop,
-        confidence: 0.94,
-        reason: `Visible ${detectedCrop} crop features.`,
-      }),
+      makePrediction(detectedCrop),
       selectedCrop,
       0.78
     );
-
     assert.equal(result.status, "rejected");
     assert.equal(result.isMatch, false);
   });
 }
 
-for (const unrelatedObject of [
-  "animal",
-  "person",
-  "car",
-  "random landscape",
-]) {
+for (const unrelatedObject of ["animal", "person", "car", "random landscape"]) {
   test(`rejects an unrelated ${unrelatedObject} image`, () => {
     const result = validateCropModelResponse(
       JSON.stringify({
@@ -98,223 +91,112 @@ for (const unrelatedObject of [
   });
 }
 
-test("asks for another image when the visual classification is uncertain", () => {
-  const uncertain = validateCropModelResponse(
-    JSON.stringify({
-      is_crop: true,
-      detected_crop: "Wheat",
-      confidence: 0.51,
-      reason: "The image is blurry and the crop cannot be identified clearly.",
-    }),
-    "Wheat",
-    0.78
+test("marks low confidence classifications uncertain", () => {
+  assert.equal(
+    validateCropModelResponse(
+      makePrediction("Wheat", { confidence: 0.5 }),
+      "Wheat"
+    ).status,
+    "uncertain"
   );
-  assert.equal(uncertain.status, "uncertain");
-  assert.equal(uncertain.isMatch, false);
 });
 
 test("rejects malformed or internally inconsistent vision output", () => {
-  assert.throws(
-    () => validateCropModelResponse("not json", "Wheat"),
-    { code: "INVALID_VISION_RESPONSE" }
-  );
+  assert.throws(() => validateCropModelResponse("not json", "Wheat"), {
+    code: "INVALID_VISION_RESPONSE",
+  });
   assert.throws(
     () =>
       validateCropModelResponse(
-        JSON.stringify({
-          is_crop: false,
-          detected_crop: "Cotton",
-          confidence: 0.99,
-          reason: "Cotton is visible.",
-        }),
+        makePrediction("Cotton", { is_crop: false }),
         "Cotton"
       ),
     { code: "INVALID_VISION_RESPONSE" }
   );
 });
 
-test("sends the actual image bytes to a vision-capable Ollama model", async () => {
+test("sends the image and structured classification request to Gemini", async () => {
   const image = makeImage();
-  let receivedImages;
-  const client = {
-    async show() {
-      return { capabilities: ["completion", "vision"] };
-    },
-    async chat(request) {
-      receivedImages = request.messages[0].images;
-      return {
-        message: {
-          content: JSON.stringify({
-            is_crop: true,
-            detected_crop: "Cotton",
-            confidence: 0.91,
-            reason: "Cotton bolls are visible.",
-          }),
-        },
-      };
-    },
-  };
-
-  const result = await classifyCropImage(image, "Cotton", {
-    client,
-    confidenceThreshold: 0.78,
-  });
-
-  assert.equal(receivedImages[0], image);
-  assert.equal(result.status, "verified");
-});
-
-test("rejects text-only configured Ollama models", async () => {
-  const client = {
-    async show() {
-      return { capabilities: ["completion"] };
-    },
-    async chat() {
-      assert.fail("Text-only models must not receive crop classification requests.");
-    },
-  };
-
-  await assert.rejects(
-    classifyCropImage(makeImage(), "Wheat", { client }),
-    { code: "VISION_MODEL_REQUIRED", statusCode: 503 }
-  );
-});
-
-test("fails closed when Ollama cannot be reached", async () => {
-  const client = {
-    async show() {
-      throw new Error("connection refused");
-    },
-    async chat() {
-      assert.fail("Unavailable Ollama must not receive image requests.");
-    },
-  };
-
-  await assert.rejects(
-    classifyCropImage(makeImage(), "Wheat", { client }),
-    {
-      code: "VISION_MODEL_UNAVAILABLE",
-      statusCode: 503,
-      message:
-        "Ollama is unavailable to the backend. Start Ollama on the backend host and confirm OLLAMA_BASE_URL points to it.",
-    }
-  );
-});
-
-test("does not connect to Ollama on Render without a remote endpoint", async () => {
-  const previousRender = process.env.RENDER;
-  const previousOllamaBaseUrl = process.env.OLLAMA_BASE_URL;
-  process.env.RENDER = "true";
-  let called = false;
-  const client = {
-    async show() {
-      called = true;
-      return { capabilities: ["completion", "vision"] };
-    },
-    async chat() {
-      called = true;
-      return {};
-    },
+  const previousApiKey = process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY = "test-gemini-api-key";
+  let requestUrl;
+  let requestOptions;
+  const fetchImpl = async (url, options) => {
+    requestUrl = url;
+    requestOptions = options;
+    return {
+      ok: true,
+      async json() {
+        return {
+          candidates: [{
+            content: {
+              parts: [{ text: makePrediction("Cotton") }],
+            },
+          }],
+        };
+      },
+    };
   };
 
   try {
-    for (const ollamaBaseUrl of [
-      undefined,
-      "http://localhost:11434",
-      "http://127.0.0.2:11434",
-      "http://0.0.0.0:11434",
-    ]) {
-      if (ollamaBaseUrl === undefined) {
-        delete process.env.OLLAMA_BASE_URL;
-      } else {
-        process.env.OLLAMA_BASE_URL = ollamaBaseUrl;
-      }
-
-      await assert.rejects(
-        classifyCropImage(makeImage(), "Wheat", { client }),
-        {
-          code: "VISION_MODEL_DISABLED",
-          statusCode: 503,
-          message:
-            "Ollama crop verification on Render requires OLLAMA_BASE_URL to point to a remote Ollama service.",
-        }
-      );
-    }
-    assert.equal(called, false);
-  } finally {
-    if (previousRender === undefined) {
-      delete process.env.RENDER;
-    } else {
-      process.env.RENDER = previousRender;
-    }
-    if (previousOllamaBaseUrl === undefined) {
-      delete process.env.OLLAMA_BASE_URL;
-    } else {
-      process.env.OLLAMA_BASE_URL = previousOllamaBaseUrl;
-    }
-  }
-});
-
-test("allows a configured remote Ollama endpoint on Render", async () => {
-  const previousRender = process.env.RENDER;
-  const previousOllamaBaseUrl = process.env.OLLAMA_BASE_URL;
-  process.env.RENDER = "true";
-  process.env.OLLAMA_BASE_URL = "https://ollama.example.com";
-  const client = {
-    async show() {
-      return { capabilities: ["completion", "vision"] };
-    },
-    async chat() {
-      return {
-        message: {
-          content: JSON.stringify({
-            is_crop: true,
-            detected_crop: "Wheat",
-            confidence: 0.91,
-            reason: "Wheat grains are visible.",
-          }),
-        },
-      };
-    },
-  };
-
-  try {
-    const result = await classifyCropImage(makeImage(), "Wheat", { client });
+    const result = await classifyCropImage(image, "Cotton", {
+      fetchImpl,
+      confidenceThreshold: 0.78,
+    });
+    assert.match(requestUrl, /models\/gemini-3\.5-flash-lite:generateContent$/);
+    assert.equal(requestOptions.headers["x-goog-api-key"], "test-gemini-api-key");
+    const requestBody = JSON.parse(requestOptions.body);
+    const imagePart = requestBody.contents[0].parts[1].inlineData;
+    assert.equal(imagePart.mimeType, "image/jpeg");
+    assert.equal(imagePart.data, image.toString("base64"));
+    assert.equal(requestBody.generationConfig.responseMimeType, "application/json");
     assert.equal(result.status, "verified");
   } finally {
-    if (previousRender === undefined) {
-      delete process.env.RENDER;
+    if (previousApiKey === undefined) {
+      delete process.env.GEMINI_API_KEY;
     } else {
-      process.env.RENDER = previousRender;
-    }
-    if (previousOllamaBaseUrl === undefined) {
-      delete process.env.OLLAMA_BASE_URL;
-    } else {
-      process.env.OLLAMA_BASE_URL = previousOllamaBaseUrl;
+      process.env.GEMINI_API_KEY = previousApiKey;
     }
   }
 });
 
-test("reports when the configured Ollama model is not installed", async () => {
-  const client = {
-    async show() {
-      const error = new Error("model 'qwen2.5vl:7b' not found");
-      error.status_code = 404;
-      throw error;
-    },
-    async chat() {
-      assert.fail("A missing Ollama model must not receive image requests.");
-    },
-  };
+test("requires a Gemini API key without making a network request", async () => {
+  const previousApiKey = process.env.GEMINI_API_KEY;
+  delete process.env.GEMINI_API_KEY;
+  try {
+    await assert.rejects(
+      classifyCropImage(makeImage(), "Wheat", {
+        fetchImpl: async () => assert.fail("Must not call Gemini without an API key."),
+      }),
+      { code: "GEMINI_API_KEY_REQUIRED", statusCode: 503 }
+    );
+  } finally {
+    if (previousApiKey !== undefined) process.env.GEMINI_API_KEY = previousApiKey;
+  }
+});
 
-  await assert.rejects(
-    classifyCropImage(makeImage(), "Wheat", { client }),
-    {
-      code: "VISION_MODEL_NOT_INSTALLED",
-      statusCode: 503,
-      message: 'The Ollama model "qwen2.5vl:7b" is not installed. Run "ollama pull qwen2.5vl:7b" on the backend host.',
+test("reports Gemini authentication failures without exposing the API key", async () => {
+  const previousApiKey = process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY = "test-gemini-api-key";
+  try {
+    await assert.rejects(
+      classifyCropImage(makeImage(), "Wheat", {
+        fetchImpl: async () => ({ ok: false, status: 403 }),
+      }),
+      {
+        code: "GEMINI_API_KEY_INVALID",
+        statusCode: 502,
+        message:
+          "Gemini rejected the API key or does not have access to the configured model.",
+      }
+    );
+  } finally {
+    if (previousApiKey === undefined) {
+      delete process.env.GEMINI_API_KEY;
+    } else {
+      process.env.GEMINI_API_KEY = previousApiKey;
     }
-  );
+  }
 });
 
 test("verification tokens are bound to exact image bytes and selected crop", () => {

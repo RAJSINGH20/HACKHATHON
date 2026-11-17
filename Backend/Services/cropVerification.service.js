@@ -1,6 +1,4 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
-import { isIP } from "node:net";
-import { Ollama } from "ollama";
 
 export const SUPPORTED_CROPS = [
   "Wheat",
@@ -42,7 +40,10 @@ export class CropVerificationError extends Error {
   }
 }
 
-const getOllamaError = (error) => {
+export const CROP_VERIFICATION_MODEL =
+  process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
+
+const getGeminiError = (error) => {
   if (error?.name === "TimeoutError" || error?.name === "AbortError") {
     return new CropVerificationError(
       "The vision model did not respond in time. Please try again.",
@@ -51,58 +52,11 @@ const getOllamaError = (error) => {
     );
   }
 
-  if (
-    error?.status_code === 404 ||
-    (typeof error?.message === "string" &&
-      /\bmodel\b.*\bnot found\b/i.test(error.message))
-  ) {
-    return new CropVerificationError(
-      `The Ollama model "${visionModel}" is not installed. Run "ollama pull ${visionModel}" on the backend host.`,
-      503,
-      "VISION_MODEL_NOT_INSTALLED"
-    );
-  }
-
   return new CropVerificationError(
-    "Ollama is unavailable to the backend. Start Ollama on the backend host and confirm OLLAMA_BASE_URL points to it.",
+    "Gemini is unavailable to the backend. Check the Gemini API key, model name, and network connection.",
     503,
     "VISION_MODEL_UNAVAILABLE"
   );
-};
-
-const ollama = new Ollama({
-  host: process.env.OLLAMA_BASE_URL || "http://localhost:11434",
-  fetch: (input, init) =>
-    fetch(input, {
-      ...init,
-      signal: AbortSignal.timeout(requestTimeout),
-    }),
-});
-const visionModel = process.env.OLLAMA_VISION_MODEL || "qwen2.5vl:7b";
-const visionChecks = new WeakMap();
-
-const hasRemoteOllamaUrl = () => {
-  if (!process.env.OLLAMA_BASE_URL) return false;
-
-  try {
-    const url = new URL(process.env.OLLAMA_BASE_URL);
-    const hostname = url.hostname.replace(/^\[|\]$/g, "").toLowerCase();
-    const isLoopback =
-      hostname === "localhost" ||
-      hostname.endsWith(".localhost") ||
-      hostname === "0.0.0.0" ||
-      hostname === "::" ||
-      hostname === "::1" ||
-      (isIP(hostname) === 4 && Number(hostname.split(".")[0]) === 127);
-
-    return (
-      ["http:", "https:"].includes(url.protocol) &&
-      hostname.length > 0 &&
-      !isLoopback
-    );
-  } catch {
-    return false;
-  }
 };
 
 export const isValidCropImage = (buffer, mimeType) => {
@@ -136,29 +90,30 @@ export const isValidCropImage = (buffer, mimeType) => {
   );
 };
 
-const ensureVisionModel = async (client) => {
-  let check = visionChecks.get(client);
-  if (!check) {
-    check = client
-      .show({ model: visionModel })
-      .then((modelInfo) => {
-        if (!modelInfo.capabilities?.includes("vision")) {
-          throw new CropVerificationError(
-            `The configured Ollama model does not support image input. Set OLLAMA_VISION_MODEL to an installed vision model, such as "${visionModel}".`,
-            503,
-            "VISION_MODEL_REQUIRED"
-          );
-        }
-      })
-      .catch((error) => {
-        if (error instanceof CropVerificationError) throw error;
-        throw getOllamaError(error);
-      });
-    visionChecks.set(client, check);
-    check.catch(() => visionChecks.delete(client));
+const getImageMimeType = (imageBuffer) => {
+  if (
+    imageBuffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+  ) {
+    return "image/png";
   }
-
-  await check;
+  if (
+    imageBuffer.toString("ascii", 0, 4) === "RIFF" &&
+    imageBuffer.toString("ascii", 8, 12) === "WEBP"
+  ) {
+    return "image/webp";
+  }
+  if (
+    imageBuffer[0] === 0xff &&
+    imageBuffer[1] === 0xd8 &&
+    imageBuffer[2] === 0xff
+  ) {
+    return "image/jpeg";
+  }
+  throw new CropVerificationError(
+    "The uploaded file is not a valid JPG, PNG, or WebP image.",
+    400,
+    "INVALID_CROP_IMAGE"
+  );
 };
 
 const normalizeDetectedCrop = (crop) => {
@@ -246,7 +201,7 @@ export const validateCropModelResponse = (
 export const classifyCropImage = async (
   imageBuffer,
   selectedCrop,
-  { client = ollama, confidenceThreshold = configuredThreshold } = {}
+  { fetchImpl = globalThis.fetch, confidenceThreshold = configuredThreshold } = {}
 ) => {
   if (!SUPPORTED_CROPS.includes(selectedCrop)) {
     throw new CropVerificationError(
@@ -256,58 +211,104 @@ export const classifyCropImage = async (
     );
   }
 
-  if (
-    process.env.RENDER?.toLowerCase() === "true" &&
-    !hasRemoteOllamaUrl()
-  ) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
     throw new CropVerificationError(
-      "Ollama crop verification on Render requires OLLAMA_BASE_URL to point to a remote Ollama service.",
+      "Gemini crop verification is not configured. Set GEMINI_API_KEY in the backend environment.",
       503,
-      "VISION_MODEL_DISABLED"
+      "GEMINI_API_KEY_REQUIRED"
     );
   }
 
-  await ensureVisionModel(client);
+  const mimeType = getImageMimeType(imageBuffer);
 
   let response;
   try {
-    response = await client.chat({
-      model: visionModel,
-      stream: false,
-      format: {
-        type: "object",
-        additionalProperties: false,
-        required: ["is_crop", "detected_crop", "confidence", "reason"],
-        properties: {
-          is_crop: { type: "boolean" },
-          detected_crop: { type: "string", enum: CROP_LABELS },
-          confidence: { type: "number", minimum: 0, maximum: 1 },
-          reason: { type: "string" },
+    response = await fetchImpl(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(CROP_VERIFICATION_MODEL)}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
         },
-      },
-      messages: [
-        {
-          role: "user",
-          content: [
-            "Inspect the attached image itself. Do not infer its contents from a filename or any user-selected crop.",
-            "Determine whether a supported crop is visibly identifiable. Supported categories are Wheat, Paddy (rice), Mustard, Maize (corn), Sugarcane, and Cotton.",
-            "Recognize plants, flowers, fruits, ears, bolls, stalks, and harvested grains at different growth stages and in field or close-up views.",
-            "Set is_crop=true and detected_crop to exactly one canonical category only when visual evidence identifies it. Use is_crop=false and detected_crop=unknown for people, animals, vehicles, buildings, unrelated crops, generic landscapes, or images without an identifiable supported crop.",
-            "Be conservative with blurry, obstructed, distant, or ambiguous images. Confidence must express certainty in your visual classification from 0 to 1; do not guess.",
-            "Return a short factual reason based only on visible evidence.",
-          ].join(" "),
-          images: [imageBuffer],
-        },
-      ],
-      options: { temperature: 0 },
-      keep_alive: "5m",
-    });
+        signal: AbortSignal.timeout(requestTimeout),
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: [
+                    "Inspect the attached image itself. Do not infer its contents from a filename or any user-selected crop.",
+                    "Determine whether a supported crop is visibly identifiable. Supported categories are Wheat, Paddy (rice), Mustard, Maize (corn), Sugarcane, and Cotton.",
+                    "Recognize plants, flowers, fruits, ears, bolls, stalks, and harvested grains at different growth stages and in field or close-up views.",
+                    "Set is_crop=true and detected_crop to exactly one canonical category only when visual evidence identifies it. Use is_crop=false and detected_crop=unknown for people, animals, vehicles, buildings, unrelated crops, generic landscapes, or images without an identifiable supported crop.",
+                    "Be conservative with blurry, obstructed, distant, or ambiguous images. Confidence must express certainty in your visual classification from 0 to 1; do not guess.",
+                    "Return a short factual reason based only on visible evidence.",
+                  ].join(" "),
+                },
+                {
+                  inlineData: {
+                    mimeType,
+                    data: imageBuffer.toString("base64"),
+                  },
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0,
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "OBJECT",
+              properties: {
+                is_crop: { type: "BOOLEAN" },
+                detected_crop: { type: "STRING", enum: CROP_LABELS },
+                confidence: { type: "NUMBER" },
+                reason: { type: "STRING" },
+              },
+              required: ["is_crop", "detected_crop", "confidence", "reason"],
+            },
+          },
+        }),
+      }
+    );
   } catch (error) {
-    throw getOllamaError(error);
+    throw getGeminiError(error);
   }
 
+  if (!response.ok) {
+    throw new CropVerificationError(
+      response.status === 401 || response.status === 403
+        ? "Gemini rejected the API key or does not have access to the configured model."
+        : response.status === 429
+          ? "Gemini API rate limit reached. Please try again shortly."
+          : `Gemini API request failed with status ${response.status}.`,
+      response.status === 429 ? 503 : 502,
+      response.status === 401 || response.status === 403
+        ? "GEMINI_API_KEY_INVALID"
+        : response.status === 429
+          ? "GEMINI_RATE_LIMITED"
+          : "GEMINI_API_ERROR"
+    );
+  }
+
+  let result;
+  try {
+    result = await response.json();
+  } catch {
+    throw new CropVerificationError(
+      "Gemini returned an invalid response.",
+      502,
+      "INVALID_VISION_RESPONSE"
+    );
+  }
+
+  const rawResponse = result.candidates?.[0]?.content?.parts
+    ?.map((part) => part.text || "")
+    .join("");
   return validateCropModelResponse(
-    response.message?.content,
+    rawResponse,
     selectedCrop,
     confidenceThreshold
   );

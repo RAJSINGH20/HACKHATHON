@@ -1,4 +1,5 @@
 import {
+  CROP_VERIFICATION_MODEL,
   classifyCropImage,
   createCropVerificationToken,
   CropVerificationError,
@@ -39,6 +40,7 @@ export const verifyCropImage = async (req, res) => {
         : null;
 
     console.info("Crop image verification completed:", {
+      model: CROP_VERIFICATION_MODEL,
       selectedCrop,
       detectedCrop: verification.detectedCrop,
       confidence: verification.confidence,
