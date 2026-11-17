@@ -41,7 +41,7 @@ export class CropVerificationError extends Error {
 }
 
 export const CROP_VERIFICATION_MODEL =
-  process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
+  process.env.GEMINI_VISION_MODEL || "gemini-3.5-flash-lite";
 
 const getGeminiError = (error) => {
   if (error?.name === "TimeoutError" || error?.name === "AbortError") {
@@ -225,7 +225,7 @@ export const classifyCropImage = async (
   let response;
   try {
     response = await fetchImpl(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(CROP_VERIFICATION_MODEL)}:generateContent`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_VISION_MODEL)}:generateContent`,
       {
         method: "POST",
         headers: {
